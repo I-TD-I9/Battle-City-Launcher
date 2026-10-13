@@ -426,3 +426,8 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# The game's own files never belong here: every player brings their own copy.
+*.dat
+*.dat.orig
+online_pc*.exe
