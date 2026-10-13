@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Product>Battle City Launcher</Product>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- A new advisory against a package is reported, but does not by itself stop a build. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <!-- Symbols inside each assembly, so a published launcher is the one file and its stack
+         traces still name lines. -->
+    <DebugType>embedded</DebugType>
+    <!-- Source paths in those symbols start at the repository, so that no build carries the
+         folder, and with it the user name, it was made in. -->
+    <DeterministicSourcePaths>true</DeterministicSourcePaths>
+    <!-- The version the launcher shows and compares against the latest release, without the
+         commit hash the SDK would otherwise append to it. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+</Project>
