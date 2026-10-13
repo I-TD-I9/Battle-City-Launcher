@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/BattleCity.Core/BattleCity.Core.csproj" />
+    <Project Path="src/BattleCity.Launcher/BattleCity.Launcher.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/BattleCity.Core.Tests/BattleCity.Core.Tests.csproj" />
