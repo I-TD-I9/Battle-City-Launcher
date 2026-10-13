@@ -1,0 +1,26 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      # The tests that need the game's own client are skipped here: it cannot be in the repository.
+      - run: dotnet test -c Release
+      - run: dotnet publish src/BattleCity.Launcher -c Release -o publish
+      - uses: actions/upload-artifact@v7
+        with:
+          name: BattleCityLauncher
+          path: publish/BattleCityLauncher.exe
+          if-no-files-found: error
