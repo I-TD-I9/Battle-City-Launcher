@@ -58,7 +58,6 @@
         </StackPanel>
         <StackPanel VerticalAlignment="Center">
           <TextBlock Text="BATTLE CITY" FontSize="30" FontWeight="Black" Foreground="{StaticResource AccentBrush}" />
-          <TextBlock Text="An unofficial server for Yu-Gi-Oh! Online" Foreground="{StaticResource MutedBrush}" />
         </StackPanel>
       </DockPanel>
     </Border>
@@ -216,16 +215,11 @@
       </TabItem>
     </TabControl>
 
-    <!-- Who this is not, and where it comes from. -->
+    <!-- Which launcher this is, and where it comes from. -->
     <Border Grid.Row="3" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="28,12">
-      <DockPanel>
-        <TextBlock DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource MutedBrush}">
-          <Run Text="{Binding VersionText, Mode=OneWay}" /> · <Hyperlink Click="Project_Click">Project page</Hyperlink>
-        </TextBlock>
-        <TextBlock FontSize="12" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,0,16,0">
-          Not affiliated with Konami. Play with your own copy of the game.
-        </TextBlock>
-      </DockPanel>
+      <TextBlock HorizontalAlignment="Right" FontSize="12" Foreground="{StaticResource MutedBrush}">
+        <Run Text="{Binding VersionText, Mode=OneWay}" /> · <Hyperlink Click="Project_Click">Project page</Hyperlink>
+      </TextBlock>
     </Border>
   </Grid>
 </Window>
