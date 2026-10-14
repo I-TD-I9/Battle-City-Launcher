@@ -35,6 +35,15 @@ public partial class MainWindow : Window
             model.ChooseFolder(dialog.FolderName);
     }
 
+    async void SignUp_Click(object sender, RoutedEventArgs e)
+    {
+        if (await model.SignUpAsync(Password.Password, Confirm.Password))
+        {
+            Password.Clear();
+            Confirm.Clear();
+        }
+    }
+
     void Project_Click(object sender, RoutedEventArgs e) => MainViewModel.Open(Releases.ProjectPage);
 
     const int DwmwaUseImmersiveDarkMode = 20;

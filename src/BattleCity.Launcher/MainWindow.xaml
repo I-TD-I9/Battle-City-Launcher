@@ -79,10 +79,61 @@
 
           <TextBlock Style="{StaticResource Note}" Margin="0,18,0,0">
             Log in with your Battle City account, exactly as you signed it up: the name is case-sensitive.
+            No account yet? Make one under Create account.
           </TextBlock>
         </StackPanel>
       </TabItem>
 
+      <TabItem Header="Create account">
+        <StackPanel Margin="0,22,0,0">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="130" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0" Text="Name" VerticalAlignment="Center" />
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                     MaxLength="16" AutomationProperties.Name="Name" />
+            <TextBlock Grid.Row="1" Text="Password" VerticalAlignment="Center" Margin="0,10,0,0" />
+            <PasswordBox x:Name="Password" Grid.Row="1" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
+                         AutomationProperties.Name="Password" />
+            <TextBlock Grid.Row="2" Text="Password again" VerticalAlignment="Center" Margin="0,10,0,0" />
+            <PasswordBox x:Name="Confirm" Grid.Row="2" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
+                         AutomationProperties.Name="Password again" />
+          </Grid>
+
+          <Button Style="{StaticResource AccentButton}" Content="{Binding SignUpText}" IsEnabled="{Binding CanSignUp}"
+                  Click="SignUp_Click" Height="40" Padding="22,0" Margin="130,18,0,0" HorizontalAlignment="Left"
+                  IsDefault="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}" />
+
+          <TextBlock Text="{Binding SignUpMessage}" TextWrapping="Wrap" Margin="130,12,0,0">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding SignUpSucceeded}" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding SignUpMessage}" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
+
+          <TextBlock Style="{StaticResource Note}" Margin="0,18,0,0">
+            The game cannot make accounts, so make the one you will log in with here. Use a password you
+            use nowhere else: the game's login makes the server keep passwords in a form it can read back.
+            There is no password reset yet.
+          </TextBlock>
+        </StackPanel>
+      </TabItem>
     </TabControl>
 
     <!-- Who this is not, and where it comes from. -->

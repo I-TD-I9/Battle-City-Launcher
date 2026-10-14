@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using BattleCity.Accounts;
 using BattleCity.Client;
 using BattleCity.Game;
 
@@ -11,12 +14,20 @@ public sealed class MainViewModel : ObservableObject
 {
     readonly LauncherSettings settings = LauncherSettings.Load(LauncherSettings.DefaultPath);
     readonly ServerEndpoints server;
+    readonly HttpClient http;
+    readonly SignUpClient signUp;
     // The window's thread, where a game that exits on its own is reported back.
     readonly SynchronizationContext ui = SynchronizationContext.Current ?? new SynchronizationContext();
+
+    SignUpRules rules = SignUpRules.Default;
 
     public MainViewModel()
     {
         server = settings.Server();
+        // Every reply the launcher reads is a few kilobytes; nothing bigger is held in memory.
+        http = new HttpClient { Timeout = TimeSpan.FromSeconds(20), MaxResponseContentBufferSize = 1 << 20 };
+        http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BattleCityLauncher", Releases.Current.ToString()));
+        signUp = new SignUpClient(http, server.Api);
     }
 
     /// <summary>Finds the game.</summary>
@@ -155,6 +166,86 @@ public sealed class MainViewModel : ObservableObject
         {
             Starting = false;
         }
+    }
+
+    // --- Sign-up ---------------------------------------------------------------------------
+
+    string name = "";
+    // The name of the last sign-up that got no answer: the server may have made it all the same.
+    string? unanswered;
+    bool signingUp;
+    string? signUpMessage;
+    bool signUpSucceeded;
+
+    public string Name
+    {
+        get => name;
+        set => Set(ref name, value);
+    }
+
+    public bool SigningUp
+    {
+        get => signingUp;
+        private set
+        {
+            if (Set(ref signingUp, value))
+                Raise(nameof(CanSignUp), nameof(SignUpText));
+        }
+    }
+
+    public bool CanSignUp => !signingUp;
+
+    public string SignUpText => signingUp ? "Creating the account" : "Create account";
+
+    public string? SignUpMessage
+    {
+        get => signUpMessage;
+        private set => Set(ref signUpMessage, value);
+    }
+
+    public bool SignUpSucceeded
+    {
+        get => signUpSucceeded;
+        private set => Set(ref signUpSucceeded, value);
+    }
+
+    /// <summary>Signs up the account; true once the server has made it.</summary>
+    public async Task<bool> SignUpAsync(string password, string confirm)
+    {
+        // Spaces are never part of a name, so stray ones around it are dropped.
+        string account = name.Trim();
+        string? problem = rules.NameProblem(account)
+                          ?? rules.PasswordProblem(password, account)
+                          ?? (password == confirm ? null : "The two passwords are not the same.");
+        if (problem is not null)
+        {
+            Tell(problem, ok: false);
+            return false;
+        }
+
+        SigningUp = true;
+        try
+        {
+            var result = await signUp.RegisterAsync(account, password);
+            string message = result.Ok
+                ? $"The account {result.Name} is ready. Press Play, and log in with exactly this name and password."
+                : result.Message;
+            if (result.Error == "name_taken" && unanswered == account)
+                message += " If your last try got no answer, the account may have been made all the same: try logging in with it.";
+            unanswered = result.Error == SignUpClient.Unreachable ? account : null;
+            Tell(message, result.Ok);
+            return result.Ok;
+        }
+        finally
+        {
+            SigningUp = false;
+        }
+    }
+
+    void Tell(string message, bool ok)
+    {
+        SignUpSucceeded = ok;
+        SignUpMessage = message;
     }
 
     // --- The launcher itself -----------------------------------------------------------------
