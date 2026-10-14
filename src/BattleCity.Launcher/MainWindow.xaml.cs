@@ -26,6 +26,8 @@ public partial class MainWindow : Window
 
     async void Play_Click(object sender, RoutedEventArgs e) => await model.PlayAsync();
 
+    async void Refresh_Click(object sender, RoutedEventArgs e) => await model.CheckServerAsync();
+
     void Browse_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog { Title = "Choose the folder Yu-Gi-Oh! ONLINE is installed in" };

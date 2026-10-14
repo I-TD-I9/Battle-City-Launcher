@@ -9,6 +9,17 @@ using BattleCity.Game;
 
 namespace BattleCity.Launcher;
 
+public enum ServerState
+{
+    Checking,
+    Online,
+
+    /// <summary>The sign-up API answers but the gate cannot be reached: a network blocking the game's ports.</summary>
+    Blocked,
+
+    Offline,
+}
+
 /// <summary>Everything the launcher's window shows and does.</summary>
 public sealed class MainViewModel : ObservableObject
 {
@@ -20,6 +31,7 @@ public sealed class MainViewModel : ObservableObject
     readonly SynchronizationContext ui = SynchronizationContext.Current ?? new SynchronizationContext();
 
     SignUpRules rules = SignUpRules.Default;
+    bool rulesKnown;
 
     public MainViewModel()
     {
@@ -30,10 +42,11 @@ public sealed class MainViewModel : ObservableObject
         signUp = new SignUpClient(http, server.Api);
     }
 
-    /// <summary>Finds the game.</summary>
+    /// <summary>Finds the game, then asks after the server.</summary>
     public async Task StartAsync()
     {
         Game = await Task.Run(() => GameLocator.Find(settings.GameFolder));
+        await CheckServerAsync();
     }
 
     // --- The game --------------------------------------------------------------------------
@@ -168,6 +181,74 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    // --- The server ------------------------------------------------------------------------
+
+    // Each check opens a connection to the gate, and the server limits how many new connections
+    // one address may open in a minute, so a check waits for the one before and comes no sooner
+    // than this after it.
+    static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(10);
+
+    ServerState serverState;
+    bool checking;
+    DateTime lastCheck = DateTime.MinValue;
+
+    public ServerState ServerState
+    {
+        get => serverState;
+        private set
+        {
+            if (Set(ref serverState, value))
+                Raise(nameof(ServerText));
+        }
+    }
+
+    public string ServerText => serverState switch
+    {
+        ServerState.Online => "Server online",
+        ServerState.Blocked => "Server unreachable from this network",
+        ServerState.Offline => "Server offline",
+        _ => "Checking the server",
+    };
+
+    public string SignUpStateText => !rulesKnown ? "" : rules.Open ? "Sign-up open" : "Sign-up closed";
+
+    public bool CanCheck => !checking;
+
+    public async Task CheckServerAsync()
+    {
+        if (checking || DateTime.UtcNow - lastCheck < CheckInterval)
+            return;
+        checking = true;
+        lastCheck = DateTime.UtcNow;
+        Raise(nameof(CanCheck));
+        ServerState = ServerState.Checking;
+        try
+        {
+            var fetching = signUp.GetRulesAsync();
+            var probing = ServerProbe.GateOpensAsync(server, TimeSpan.FromSeconds(6));
+            var fetched = await fetching;
+            bool gate = await probing;
+            if (fetched is not null)
+            {
+                rules = fetched;
+                rulesKnown = true;
+                Raise(nameof(SignUpStateText));
+            }
+            ServerState = gate ? ServerState.Online : fetched is not null ? ServerState.Blocked : ServerState.Offline;
+        }
+        catch (Exception)
+        {
+            // A status check never takes the launcher down: whatever went wrong, the server could
+            // not be reached.
+            ServerState = ServerState.Offline;
+        }
+        finally
+        {
+            checking = false;
+            Raise(nameof(CanCheck));
+        }
+    }
+
     // --- Sign-up ---------------------------------------------------------------------------
 
     string name = "";
@@ -217,6 +298,8 @@ public sealed class MainViewModel : ObservableObject
         string? problem = rules.NameProblem(account)
                           ?? rules.PasswordProblem(password, account)
                           ?? (password == confirm ? null : "The two passwords are not the same.");
+        if (problem is null && rulesKnown && !rules.Open)
+            problem = "Sign-up is closed for now.";
         if (problem is not null)
         {
             Tell(problem, ok: false);

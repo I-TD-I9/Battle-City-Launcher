@@ -18,11 +18,39 @@
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <!-- The launcher's name. -->
+    <!-- The name, and how the server is. -->
     <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" Padding="28,22,20,22">
       <DockPanel>
         <Image Source="Assets/BattleCity.png" Width="60" Height="60" Margin="0,0,16,0" DockPanel.Dock="Left"
                RenderOptions.BitmapScalingMode="HighQuality" />
+        <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Ellipse Width="9" Height="9" Margin="0,0,8,0" VerticalAlignment="Center">
+              <Ellipse.Style>
+                <Style TargetType="Ellipse">
+                  <Setter Property="Fill" Value="{StaticResource MutedBrush}" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding ServerState}" Value="Online">
+                      <Setter Property="Fill" Value="{StaticResource GoodBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding ServerState}" Value="Blocked">
+                      <Setter Property="Fill" Value="{StaticResource WarnBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding ServerState}" Value="Offline">
+                      <Setter Property="Fill" Value="{StaticResource BadBrush}" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Ellipse.Style>
+            </Ellipse>
+            <TextBlock Text="{Binding ServerText}" VerticalAlignment="Center" />
+            <Button Style="{StaticResource IconButton}" Content="&#xE72C;" Margin="6,0,0,0" Click="Refresh_Click"
+                    IsEnabled="{Binding CanCheck}"
+                    ToolTip="Check the server again" AutomationProperties.Name="Check the server again" />
+          </StackPanel>
+          <TextBlock Text="{Binding SignUpStateText}" Foreground="{StaticResource MutedBrush}" FontSize="12"
+                     HorizontalAlignment="Right" Margin="0,0,30,0" />
+        </StackPanel>
         <StackPanel VerticalAlignment="Center">
           <TextBlock Text="BATTLE CITY" FontSize="30" FontWeight="Black" Foreground="{StaticResource AccentBrush}" />
           <TextBlock Text="An unofficial server for Yu-Gi-Oh! Online" Foreground="{StaticResource MutedBrush}" />
