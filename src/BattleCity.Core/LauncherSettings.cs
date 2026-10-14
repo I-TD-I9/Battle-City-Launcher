@@ -25,6 +25,9 @@ public sealed class LauncherSettings
     /// <summary>The game folder the player chose, when the launcher could not find it alone.</summary>
     public string? GameFolder { get; set; }
 
+    /// <summary>The UserID of the last account made with the launcher, for its Create account page.</summary>
+    public string? LastAccount { get; set; }
+
     // For trying the launcher against another server, such as one on this machine. Nothing in the
     // launcher's window sets these.
     public string? GateHost { get; set; }

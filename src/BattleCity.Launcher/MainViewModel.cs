@@ -133,13 +133,19 @@ public sealed class MainViewModel : ObservableObject
         if (Game.Status != GameStatus.Ready)
             return;
         settings.GameFolder = Game.Path;
+        SaveSettings();
+    }
+
+    void SaveSettings()
+    {
         try
         {
             settings.Save(LauncherSettings.DefaultPath);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // Only the choice is lost: the next start asks for the folder again.
+            // Nothing breaks: the launcher just won't remember the folder, or the last account,
+            // next time.
         }
     }
 
@@ -262,6 +268,7 @@ public sealed class MainViewModel : ObservableObject
     // The UserID of the last sign-up that got no answer: the server may have made it all the same.
     string? unanswered;
     bool signingUp;
+    bool formOpen;
     string? signUpMessage;
     bool signUpSucceeded;
 
@@ -269,6 +276,31 @@ public sealed class MainViewModel : ObservableObject
     {
         get => userId;
         set => Set(ref userId, value);
+    }
+
+    /// <summary>The UserID of the last account made with the launcher, or null before the first.</summary>
+    public string? LastAccount => settings.LastAccount;
+
+    public bool HasLastAccount => !string.IsNullOrWhiteSpace(settings.LastAccount);
+
+    // Once an account has been made here, the Create account page shows it, and the form only
+    // comes up when the player asks for another.
+    public bool ShowingForm => formOpen || !HasLastAccount;
+
+    public bool ShowingLastAccount => !ShowingForm;
+
+    public void OpenForm()
+    {
+        formOpen = true;
+        SignUpMessage = null;
+        Raise(nameof(ShowingForm), nameof(ShowingLastAccount));
+    }
+
+    public void CloseForm()
+    {
+        formOpen = false;
+        SignUpMessage = null;
+        Raise(nameof(ShowingForm), nameof(ShowingLastAccount));
     }
 
     public bool SigningUp
@@ -317,14 +349,23 @@ public sealed class MainViewModel : ObservableObject
         try
         {
             var result = await signUp.RegisterAsync(account, password);
-            string message = result.Ok
-                ? $"The account {result.Name} is ready. Press Play, and log in with exactly this UserID and password."
-                : result.Message;
+            if (result.Ok)
+            {
+                settings.LastAccount = result.Name ?? account;
+                SaveSettings();
+                UserId = "";
+                unanswered = null;
+                formOpen = false;
+                Raise(nameof(LastAccount), nameof(HasLastAccount), nameof(ShowingForm), nameof(ShowingLastAccount));
+                Tell("Your account is ready. Press Play and log in with this UserID and your password.", ok: true);
+                return true;
+            }
+            string message = result.Message;
             if (result.Error == "name_taken" && unanswered == account)
                 message += " If your last try got no answer, the account may have been made all the same: try logging in with it.";
             unanswered = result.Error == SignUpClient.Unreachable ? account : null;
-            Tell(message, result.Ok);
-            return result.Ok;
+            Tell(message, ok: false);
+            return false;
         }
         finally
         {

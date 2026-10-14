@@ -128,32 +128,70 @@
 
       <TabItem Header="Create account">
         <StackPanel Margin="0,22,0,0">
-          <Grid>
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="130" />
-              <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="Auto" />
-              <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Text="UserID" VerticalAlignment="Center" />
-            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding UserId, UpdateSourceTrigger=PropertyChanged}"
-                     MaxLength="16" AutomationProperties.Name="UserID" />
-            <TextBlock Grid.Row="1" Text="Password" VerticalAlignment="Center" Margin="0,10,0,0" />
-            <PasswordBox x:Name="Password" Grid.Row="1" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
-                         AutomationProperties.Name="Password" />
-            <TextBlock Grid.Row="2" Text="Confirm Password" VerticalAlignment="Center" Margin="0,10,0,0" />
-            <PasswordBox x:Name="Confirm" Grid.Row="2" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
-                         AutomationProperties.Name="Confirm Password" />
-          </Grid>
+          <!-- The last account made here, until the player asks for another. -->
+          <StackPanel Visibility="{Binding ShowingLastAccount, Converter={StaticResource Shown}}">
+            <TextBlock Text="Last account created" Style="{StaticResource Label}" />
+            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="12,7" HorizontalAlignment="Left" MinWidth="260">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="UserID" Foreground="{StaticResource MutedBrush}" FontSize="12.5"
+                           VerticalAlignment="Center" Margin="0,2,12,0" />
+                <TextBlock Text="{Binding LastAccount}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
+            <Button Style="{StaticResource AccentButton}" Content="Create account" Click="NewAccount_Click"
+                    Height="40" Padding="22,0" Margin="0,18,0,0" HorizontalAlignment="Left" />
+          </StackPanel>
 
-          <Button Style="{StaticResource AccentButton}" Content="{Binding SignUpText}" IsEnabled="{Binding CanSignUp}"
-                  Click="SignUp_Click" Height="40" Padding="22,0" Margin="130,18,0,0" HorizontalAlignment="Left"
-                  IsDefault="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}" />
+          <!-- The form for a new account. -->
+          <StackPanel Visibility="{Binding ShowingForm, Converter={StaticResource Shown}}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="130" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <TextBlock Grid.Row="0" Text="UserID" VerticalAlignment="Center" />
+              <TextBox x:Name="UserIdBox" Grid.Row="0" Grid.Column="1"
+                       Text="{Binding UserId, UpdateSourceTrigger=PropertyChanged}"
+                       MaxLength="16" AutomationProperties.Name="UserID" />
+              <TextBlock Grid.Row="1" Text="Password" VerticalAlignment="Center" Margin="0,10,0,0" />
+              <PasswordBox x:Name="Password" Grid.Row="1" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
+                           AutomationProperties.Name="Password" />
+              <TextBlock Grid.Row="2" Text="Confirm Password" VerticalAlignment="Center" Margin="0,10,0,0" />
+              <PasswordBox x:Name="Confirm" Grid.Row="2" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
+                           AutomationProperties.Name="Confirm Password" />
+            </Grid>
 
-          <TextBlock Text="{Binding SignUpMessage}" TextWrapping="Wrap" Margin="130,12,0,0">
+            <StackPanel Orientation="Horizontal" Margin="130,18,0,0">
+              <Button Content="{Binding SignUpText}" IsEnabled="{Binding CanSignUp}" Click="SignUp_Click"
+                      Height="40" Padding="22,0">
+                <!-- Enter makes the account while the form is up on this page. -->
+                <Button.Style>
+                  <Style TargetType="Button" BasedOn="{StaticResource AccentButton}">
+                    <Style.Triggers>
+                      <MultiDataTrigger>
+                        <MultiDataTrigger.Conditions>
+                          <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}"
+                                     Value="True" />
+                          <Condition Binding="{Binding ShowingForm}" Value="True" />
+                        </MultiDataTrigger.Conditions>
+                        <Setter Property="IsDefault" Value="True" />
+                      </MultiDataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Button.Style>
+              </Button>
+              <Button Content="Cancel" Click="Cancel_Click" Height="40" Padding="18,0" Margin="10,0,0,0"
+                      Visibility="{Binding HasLastAccount, Converter={StaticResource Shown}}" />
+            </StackPanel>
+          </StackPanel>
+
+          <TextBlock Text="{Binding SignUpMessage}" TextWrapping="Wrap" Margin="0,12,0,0">
             <TextBlock.Style>
               <Style TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
@@ -170,9 +208,9 @@
           </TextBlock>
 
           <TextBlock Style="{StaticResource Note}" Margin="0,18,0,0">
-            The game cannot make accounts, so make the one you will log in with here. Use a password you
-            use nowhere else: the game's login makes the server keep passwords in a form it can read back.
-            There is no password reset yet.
+            The game can't make accounts, so make the one you'll log in with here. Use a password you
+            don't use anywhere else: the way the game logs in means the server has to keep passwords in
+            a form it can read back. There's no password reset yet.
           </TextBlock>
         </StackPanel>
       </TabItem>

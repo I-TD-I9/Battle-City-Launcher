@@ -45,9 +45,21 @@ public sealed class LauncherSettingsTests : IDisposable
     [Fact]
     public void What_is_saved_loads_back()
     {
-        new LauncherSettings { GameFolder = @"D:\Games\Yu-Gi-Oh! ONLINE" }.Save(File);
-        Assert.Equal(@"D:\Games\Yu-Gi-Oh! ONLINE", LauncherSettings.Load(File).GameFolder);
+        new LauncherSettings { GameFolder = @"D:\Games\Yu-Gi-Oh! ONLINE", LastAccount = "Duelist" }.Save(File);
+        var settings = LauncherSettings.Load(File);
+        Assert.Equal(@"D:\Games\Yu-Gi-Oh! ONLINE", settings.GameFolder);
+        Assert.Equal("Duelist", settings.LastAccount);
         Assert.False(System.IO.File.Exists(File + ".new"));
+    }
+
+    [Fact]
+    public void A_file_without_a_last_account_still_loads()
+    {
+        Directory.CreateDirectory(folder);
+        System.IO.File.WriteAllText(File, """{ "gameFolder": "D:\\Games\\Yu-Gi-Oh! ONLINE" }""");
+        var settings = LauncherSettings.Load(File);
+        Assert.Equal(@"D:\Games\Yu-Gi-Oh! ONLINE", settings.GameFolder);
+        Assert.Null(settings.LastAccount);
     }
 
     [Fact]

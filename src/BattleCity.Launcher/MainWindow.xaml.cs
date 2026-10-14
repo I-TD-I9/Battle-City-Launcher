@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using Microsoft.Win32;
 
 namespace BattleCity.Launcher;
@@ -35,6 +36,20 @@ public partial class MainWindow : Window
             dialog.InitialDirectory = game.Path;
         if (dialog.ShowDialog(this) == true)
             model.ChooseFolder(dialog.FolderName);
+    }
+
+    void NewAccount_Click(object sender, RoutedEventArgs e)
+    {
+        model.OpenForm();
+        // The box only takes focus once the form is laid out.
+        Dispatcher.BeginInvoke(() => UserIdBox.Focus(), DispatcherPriority.Input);
+    }
+
+    void Cancel_Click(object sender, RoutedEventArgs e)
+    {
+        Password.Clear();
+        Confirm.Clear();
+        model.CloseForm();
     }
 
     async void SignUp_Click(object sender, RoutedEventArgs e)
