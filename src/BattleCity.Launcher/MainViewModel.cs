@@ -30,6 +30,8 @@ public sealed class MainViewModel : ObservableObject
     // The window's thread, where a game that exits on its own is reported back.
     readonly SynchronizationContext ui = SynchronizationContext.Current ?? new SynchronizationContext();
 
+    readonly bool elevated = Elevation.ByRequest();
+
     SignUpRules rules = SignUpRules.Default;
     bool rulesKnown;
 
@@ -45,6 +47,8 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Finds the game, then asks after the server and the launcher's own updates.</summary>
     public async Task StartAsync()
     {
+        if (elevated)
+            PlayError = AsAdministrator;
         Game = await Task.Run(() => GameLocator.Find(settings.GameFolder));
         await Task.WhenAll(CheckServerAsync(), CheckForUpdateAsync());
     }
@@ -99,7 +103,10 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    public bool CanPlay => GameReady && !starting && !running;
+    public bool CanPlay => GameReady && !starting && !running && !elevated;
+
+    const string AsAdministrator =
+        "The launcher is running as administrator. Close it and start it again normally: the game must not run with administrator rights.";
 
     public string PlayText => running ? "GAME RUNNING" : starting ? "STARTING" : "PLAY";
 
@@ -122,7 +129,7 @@ public sealed class MainViewModel : ObservableObject
             PlayError = $"The launcher could not read that folder: {e.Message}";
             return;
         }
-        PlayError = null;
+        PlayError = elevated ? AsAdministrator : null;
         if (Game.Status != GameStatus.Ready)
             return;
         settings.GameFolder = Game.Path;
