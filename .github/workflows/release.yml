@@ -1,0 +1,36 @@
+name: Release
+
+# Pushing a tag vX.Y.Z publishes the launcher as that version and attaches it, with its SHA-256,
+# to a GitHub release of the same name.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test -c Release
+      - name: Publish
+        shell: pwsh
+        run: |
+          dotnet publish src/BattleCity.Launcher -c Release -o publish -p:Version=$($env:TAG.TrimStart('v'))
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $hash = (Get-FileHash publish/BattleCityLauncher.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  BattleCityLauncher.exe" | Out-File -Encoding ascii publish/BattleCityLauncher.exe.sha256
+      - name: Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:TAG publish/BattleCityLauncher.exe publish/BattleCityLauncher.exe.sha256 `
+            --title "Battle City Launcher $env:TAG" --generate-notes
