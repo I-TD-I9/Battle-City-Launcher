@@ -129,6 +129,12 @@
               <Button Style="{StaticResource AccentButton}" Content="{Binding PlayText}" IsEnabled="{Binding CanPlay}"
                       Click="Play_Click" Height="62" Margin="0,20,4,4" FontSize="26" FontWeight="Black" FontStyle="Italic" />
 
+              <TextBlock Foreground="{StaticResource BadBrush}" TextWrapping="Wrap" Margin="0,12,0,0"
+                         Visibility="{Binding Outdated, Converter={StaticResource Shown}}">
+                This launcher is out of date. <Hyperlink Click="Update_Click">Download the new one</Hyperlink>
+                to keep playing.
+              </TextBlock>
+
               <TextBlock Text="{Binding PlayError}" Foreground="{StaticResource BadBrush}" TextWrapping="Wrap" Margin="0,12,0,0">
                 <TextBlock.Style>
                   <Style TargetType="TextBlock">
@@ -245,7 +251,7 @@
         </TextBlock>
         <Border Background="{StaticResource GoldBrush}" BorderBrush="{StaticResource InkBrush}" BorderThickness="2"
                 CornerRadius="12" Padding="10,2,12,3" HorizontalAlignment="Left"
-                Visibility="{Binding HasUpdate, Converter={StaticResource Shown}}">
+                Visibility="{Binding ShowUpdate, Converter={StaticResource Shown}}">
           <TextBlock FontSize="12.5" FontWeight="SemiBold">
             <Run Text="{Binding UpdateText, Mode=OneWay}" />
             <Hyperlink Click="Update_Click" Foreground="{StaticResource InkBrush}" TextDecorations="Underline">Download it</Hyperlink>

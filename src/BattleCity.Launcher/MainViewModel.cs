@@ -103,7 +103,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    public bool CanPlay => GameReady && !starting && !running && !elevated;
+    public bool CanPlay => GameReady && !starting && !running && !elevated && !outdated;
 
     const string AsAdministrator =
         "The launcher is running as administrator. Close it and start it again normally: the game must not run with administrator rights.";
@@ -237,15 +237,16 @@ public sealed class MainViewModel : ObservableObject
         ServerState = ServerState.Checking;
         try
         {
-            var fetching = signUp.GetRulesAsync();
+            var fetching = signUp.GetInfoAsync();
             var probing = ServerProbe.GateOpensAsync(server, TimeSpan.FromSeconds(6));
             var fetched = await fetching;
             bool gate = await probing;
             if (fetched is not null)
             {
-                rules = fetched;
+                rules = fetched.Rules;
                 rulesKnown = true;
                 Raise(nameof(SignUpStateText));
+                Outdated = fetched.TooOld(Releases.Current);
             }
             ServerState = gate ? ServerState.Online : fetched is not null ? ServerState.Blocked : ServerState.Offline;
         }
@@ -334,9 +335,11 @@ public sealed class MainViewModel : ObservableObject
     {
         // Spaces are never part of a UserID, so stray ones around it are dropped.
         string account = userId.Trim();
-        string? problem = rules.NameProblem(account)
-                          ?? rules.PasswordProblem(password, account)
-                          ?? (password == confirm ? null : "The two passwords are not the same.");
+        string? problem = outdated
+            ? "This launcher is out of date. Download the new one to make an account."
+            : rules.NameProblem(account)
+              ?? rules.PasswordProblem(password, account)
+              ?? (password == confirm ? null : "The two passwords are not the same.");
         if (problem is null && rulesKnown && !rules.Open)
             problem = "Sign-up is closed for now.";
         if (problem is not null)
@@ -382,6 +385,7 @@ public sealed class MainViewModel : ObservableObject
     // --- The launcher's own updates ----------------------------------------------------------
 
     LauncherRelease? update;
+    bool outdated;
 
     public LauncherRelease? Update
     {
@@ -389,13 +393,31 @@ public sealed class MainViewModel : ObservableObject
         private set
         {
             if (Set(ref update, value))
-                Raise(nameof(HasUpdate), nameof(UpdateText));
+                Raise(nameof(ShowUpdate), nameof(UpdateText));
         }
     }
 
-    public bool HasUpdate => update is not null;
+    /// <summary>
+    /// The server takes no launcher this old any more (its GET /api/info says which it does), so
+    /// the game isn't started from it and no account is made with it.
+    /// </summary>
+    public bool Outdated
+    {
+        get => outdated;
+        private set
+        {
+            if (Set(ref outdated, value))
+                Raise(nameof(CanPlay), nameof(ShowUpdate), nameof(UpdateText));
+        }
+    }
 
-    public string UpdateText => update is null ? "" : $"Version {update.Version} of the launcher is out.";
+    public bool ShowUpdate => update is not null || outdated;
+
+    public string UpdateText => outdated ? "This launcher is out of date."
+                              : update is null ? "" : $"Version {update.Version} of the launcher is out.";
+
+    /// <summary>Where to download the new launcher: the newer release found, else the latest one.</summary>
+    public Uri UpdatePage => update?.Page ?? Releases.LatestPage;
 
     public async Task CheckForUpdateAsync()
     {

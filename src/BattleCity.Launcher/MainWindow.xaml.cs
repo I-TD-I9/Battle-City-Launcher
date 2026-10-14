@@ -64,11 +64,7 @@ public partial class MainWindow : Window
         }
     }
 
-    void Update_Click(object sender, RoutedEventArgs e)
-    {
-        if (model.Update is { } update)
-            MainViewModel.Open(update.Page);
-    }
+    void Update_Click(object sender, RoutedEventArgs e) => MainViewModel.Open(model.UpdatePage);
 
     void Project_Click(object sender, RoutedEventArgs e) => MainViewModel.Open(Releases.ProjectPage);
 

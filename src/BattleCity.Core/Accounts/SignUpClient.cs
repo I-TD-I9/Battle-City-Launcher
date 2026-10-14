@@ -29,8 +29,8 @@ public sealed class SignUpClient(HttpClient http, Uri api)
     const string NotAnswering = "The Battle City server is not answering right now. Try again later.";
     const int LongestMessage = 300;
 
-    /// <summary>The server's current rules, or null when it cannot be reached.</summary>
-    public async Task<SignUpRules?> GetRulesAsync(CancellationToken cancel = default)
+    /// <summary>The server's current rules and oldest launcher, or null when it cannot be reached.</summary>
+    public async Task<ServerInfo?> GetInfoAsync(CancellationToken cancel = default)
     {
         try
         {
@@ -38,7 +38,7 @@ public sealed class SignUpClient(HttpClient http, Uri api)
             if (response.StatusCode != HttpStatusCode.OK)
                 return null;
             using var json = JsonDocument.Parse(await response.Content.ReadAsByteArrayAsync(cancel));
-            return SignUpRules.FromInfo(json.RootElement);
+            return ServerInfo.FromInfo(json.RootElement);
         }
         catch (Exception e) when ((e is HttpRequestException or TaskCanceledException or JsonException)
                                   && !cancel.IsCancellationRequested)

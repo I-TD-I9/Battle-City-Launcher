@@ -11,6 +11,9 @@ public static class Releases
 {
     public static Uri ProjectPage { get; } = new("https://github.com/I-TD-I9/Battle-City-Launcher");
 
+    /// <summary>The page of the newest release, wherever GitHub has it.</summary>
+    public static Uri LatestPage { get; } = new("https://github.com/I-TD-I9/Battle-City-Launcher/releases/latest");
+
     static Uri LatestApi { get; } = new("https://api.github.com/repos/I-TD-I9/Battle-City-Launcher/releases/latest");
 
     /// <summary>This launcher's version, as major.minor.patch.</summary>

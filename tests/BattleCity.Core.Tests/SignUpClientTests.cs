@@ -89,7 +89,7 @@ public class SignUpClientTests
         var (client, _) = Client(_ => throw new HttpRequestException("no route"));
         var result = await client.RegisterAsync("Duelist", "Battle-City!");
         Assert.Equal(SignUpClient.Unreachable, result.Error);
-        Assert.Null(await client.GetRulesAsync());
+        Assert.Null(await client.GetInfoAsync());
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class SignUpClientTests
              "name": {"min": 3, "max": 16, "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"},
              "password": {"min": 8, "max": 16, "pattern": "^[!-~]+$"}}
             """));
-        Assert.Equal(SignUpRules.Default, await client.GetRulesAsync());
+        Assert.Equal(new ServerInfo(SignUpRules.Default, null), await client.GetInfoAsync());
         Assert.Equal(new Uri("https://api.example.test/api/info"), server.Seen.Single().Uri);
     }
 
@@ -115,7 +115,7 @@ public class SignUpClientTests
              "name": {"min": 3, "max": 16, "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"},
              "password": {"min": 8, "max": 16, "pattern": "^[!-~]+$"}}
             """, "application/json; charset=" + charset));
-        Assert.Equal(SignUpRules.Default, await rules.GetRulesAsync());
+        Assert.Equal(SignUpRules.Default, (await rules.GetInfoAsync())?.Rules);
 
         var (blocked, _) = Client(_ => Labelled(HttpStatusCode.Forbidden, "<html>Blocked by policy</html>",
                                                 "text/html; charset=" + charset));
@@ -127,7 +127,7 @@ public class SignUpClientTests
     public async Task An_error_status_gives_no_rules()
     {
         var (client, _) = Client(_ => Reply(HttpStatusCode.InternalServerError, """{"ok": false}"""));
-        Assert.Null(await client.GetRulesAsync());
+        Assert.Null(await client.GetInfoAsync());
     }
 
     [Fact]
