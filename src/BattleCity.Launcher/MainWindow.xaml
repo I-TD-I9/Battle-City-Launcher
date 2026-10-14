@@ -7,219 +7,251 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=local:MainViewModel}"
         Title="Battle City Launcher"
-        Width="600" Height="660" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
-        Background="{StaticResource WindowBrush}" Foreground="{StaticResource TextBrush}"
+        SizeToContent="WidthAndHeight" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
+        Background="{StaticResource PaperBrush}" Foreground="{StaticResource TextBrush}"
         FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
 
   <Window.Resources>
     <BooleanToVisibilityConverter x:Key="Shown" />
   </Window.Resources>
 
-  <Grid>
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="*" />
-      <RowDefinition Height="Auto" />
-    </Grid.RowDefinitions>
+  <Grid Width="900" Height="600">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="318" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
 
-    <!-- The name, and how the server is. -->
-    <Border Grid.Row="0" Background="{StaticResource HeaderBrush}" Padding="28,22,20,22">
-      <DockPanel>
-        <Image Source="Assets/BattleCity.png" Width="60" Height="60" Margin="0,0,16,0" DockPanel.Dock="Left"
-               RenderOptions.BitmapScalingMode="HighQuality" />
-        <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-            <Ellipse Width="9" Height="9" Margin="0,0,8,0" VerticalAlignment="Center">
-              <Ellipse.Style>
-                <Style TargetType="Ellipse">
-                  <Setter Property="Fill" Value="{StaticResource MutedBrush}" />
-                  <Style.Triggers>
-                    <DataTrigger Binding="{Binding ServerState}" Value="Online">
-                      <Setter Property="Fill" Value="{StaticResource GoodBrush}" />
-                    </DataTrigger>
-                    <DataTrigger Binding="{Binding ServerState}" Value="Blocked">
-                      <Setter Property="Fill" Value="{StaticResource WarnBrush}" />
-                    </DataTrigger>
-                    <DataTrigger Binding="{Binding ServerState}" Value="Offline">
-                      <Setter Property="Fill" Value="{StaticResource BadBrush}" />
-                    </DataTrigger>
-                  </Style.Triggers>
-                </Style>
-              </Ellipse.Style>
-            </Ellipse>
-            <TextBlock Text="{Binding ServerText}" VerticalAlignment="Center" />
-            <Button Style="{StaticResource IconButton}" Content="&#xE72C;" Margin="6,0,0,0" Click="Refresh_Click"
-                    IsEnabled="{Binding CanCheck}"
-                    ToolTip="Check the server again" AutomationProperties.Name="Check the server again" />
-          </StackPanel>
-          <TextBlock Text="{Binding SignUpStateText}" Foreground="{StaticResource MutedBrush}" FontSize="12"
-                     HorizontalAlignment="Right" Margin="0,0,30,0" />
-        </StackPanel>
-        <StackPanel VerticalAlignment="Center">
-          <TextBlock Text="BATTLE CITY" FontSize="30" FontWeight="Black" Foreground="{StaticResource AccentBrush}" />
-        </StackPanel>
-      </DockPanel>
-    </Border>
+    <!-- The plaza, in an inked panel. -->
+    <Grid Grid.Column="0" Margin="18,18,0,24">
+      <Border Background="{StaticResource InkBrush}" CornerRadius="16" Margin="5,5,-5,-5" />
+      <Border Background="{StaticResource InkBrush}" CornerRadius="16" Padding="3">
+        <local:Plaza CornerRadius="13" />
+      </Border>
+    </Grid>
 
-    <!-- A newer launcher, when there is one. -->
-    <Border Grid.Row="1" Background="#332B2350" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1"
-            Padding="28,10" Visibility="{Binding HasUpdate, Converter={StaticResource Shown}}">
-      <TextBlock>
-        <Run Text="{Binding UpdateText, Mode=OneWay}" />
-        <Hyperlink Click="Update_Click">Download it</Hyperlink>
-      </TextBlock>
-    </Border>
+    <Grid Grid.Column="1" Margin="30,16,26,14">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
 
-    <TabControl Grid.Row="2" Margin="28,18,28,0">
-
-      <TabItem Header="Play">
-        <StackPanel Margin="0,24,0,0">
-          <TextBlock Text="Game folder" Style="{StaticResource Label}" />
-          <DockPanel>
-            <Button Content="Change…" DockPanel.Dock="Right" Margin="10,0,0,0" Click="Browse_Click" />
-            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
-                    CornerRadius="6" Height="38" Padding="10,0">
-              <TextBlock Text="{Binding GameFolderText}" ToolTip="{Binding GameFolderText}" VerticalAlignment="Center"
-                         TextTrimming="CharacterEllipsis" />
-            </Border>
-          </DockPanel>
-
-          <DockPanel Margin="0,12,0,0">
-            <TextBlock DockPanel.Dock="Left" FontFamily="{StaticResource IconFont}" FontSize="14" Margin="0,2,8,0">
-              <TextBlock.Style>
-                <Style TargetType="TextBlock">
-                  <Setter Property="Text" Value="&#xE7BA;" />
-                  <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
-                  <Style.Triggers>
-                    <DataTrigger Binding="{Binding GameReady}" Value="True">
-                      <Setter Property="Text" Value="&#xE73E;" />
-                      <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
-                    </DataTrigger>
-                  </Style.Triggers>
-                </Style>
-              </TextBlock.Style>
-            </TextBlock>
-            <TextBlock Text="{Binding GameStatusText}" TextWrapping="Wrap" />
-          </DockPanel>
-
-          <Button Style="{StaticResource AccentButton}" Content="{Binding PlayText}" IsEnabled="{Binding CanPlay}"
-                  Click="Play_Click" Height="58" Margin="0,30,0,0" FontSize="20" FontWeight="Bold" />
-
-          <TextBlock Text="{Binding PlayError}" Foreground="{StaticResource BadBrush}" TextWrapping="Wrap" Margin="0,12,0,0">
-            <TextBlock.Style>
-              <Style TargetType="TextBlock">
-                <Style.Triggers>
-                  <DataTrigger Binding="{Binding PlayError}" Value="{x:Null}">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                  </DataTrigger>
-                </Style.Triggers>
-              </Style>
-            </TextBlock.Style>
-          </TextBlock>
-
-          <TextBlock Style="{StaticResource Note}" Margin="0,18,0,0">
-            Log in with your Battle City account, exactly as you signed it up: your UserID is case-sensitive.
-            No account yet? Make one under Create account.
-          </TextBlock>
-        </StackPanel>
-      </TabItem>
-
-      <TabItem Header="Create account">
-        <StackPanel Margin="0,22,0,0">
-          <!-- The last account made here, until the player asks for another. -->
-          <StackPanel Visibility="{Binding ShowingLastAccount, Converter={StaticResource Shown}}">
-            <TextBlock Text="Last account created" Style="{StaticResource Label}" />
-            <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1"
-                    CornerRadius="6" Padding="12,7" HorizontalAlignment="Left" MinWidth="260">
-              <StackPanel Orientation="Horizontal">
-                <TextBlock Text="UserID" Foreground="{StaticResource MutedBrush}" FontSize="12.5"
-                           VerticalAlignment="Center" Margin="0,2,12,0" />
-                <TextBlock Text="{Binding LastAccount}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
-              </StackPanel>
-            </Border>
-            <Button Style="{StaticResource AccentButton}" Content="Create account" Click="NewAccount_Click"
-                    Height="40" Padding="22,0" Margin="0,18,0,0" HorizontalAlignment="Left" />
-          </StackPanel>
-
-          <!-- The form for a new account. -->
-          <StackPanel Visibility="{Binding ShowingForm, Converter={StaticResource Shown}}">
-            <Grid>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="130" />
-                <ColumnDefinition Width="*" />
-              </Grid.ColumnDefinitions>
-              <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-              </Grid.RowDefinitions>
-              <TextBlock Grid.Row="0" Text="UserID" VerticalAlignment="Center" />
-              <TextBox x:Name="UserIdBox" Grid.Row="0" Grid.Column="1"
-                       Text="{Binding UserId, UpdateSourceTrigger=PropertyChanged}"
-                       MaxLength="16" AutomationProperties.Name="UserID" />
-              <TextBlock Grid.Row="1" Text="Password" VerticalAlignment="Center" Margin="0,10,0,0" />
-              <PasswordBox x:Name="Password" Grid.Row="1" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
-                           AutomationProperties.Name="Password" />
-              <TextBlock Grid.Row="2" Text="Confirm Password" VerticalAlignment="Center" Margin="0,10,0,0" />
-              <PasswordBox x:Name="Confirm" Grid.Row="2" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
-                           AutomationProperties.Name="Confirm Password" />
-            </Grid>
-
-            <StackPanel Orientation="Horizontal" Margin="130,18,0,0">
-              <Button Content="{Binding SignUpText}" IsEnabled="{Binding CanSignUp}" Click="SignUp_Click"
-                      Height="40" Padding="22,0">
-                <!-- Enter makes the account while the form is up on this page. -->
-                <Button.Style>
-                  <Style TargetType="Button" BasedOn="{StaticResource AccentButton}">
+      <!-- The name, and how the server is. -->
+      <DockPanel Grid.Row="0">
+        <StackPanel DockPanel.Dock="Right" VerticalAlignment="Top" Margin="12,4,0,0">
+          <Border Background="{StaticResource FieldBrush}" BorderBrush="{StaticResource InkBrush}" BorderThickness="2"
+                  CornerRadius="15" Padding="10,2,3,2">
+            <StackPanel Orientation="Horizontal">
+              <Ellipse Width="12" Height="12" Stroke="{StaticResource InkBrush}" StrokeThickness="1.5"
+                       VerticalAlignment="Center">
+                <Ellipse.Style>
+                  <Style TargetType="Ellipse">
+                    <Setter Property="Fill" Value="#FFB9BFC9" />
                     <Style.Triggers>
-                      <MultiDataTrigger>
-                        <MultiDataTrigger.Conditions>
-                          <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}"
-                                     Value="True" />
-                          <Condition Binding="{Binding ShowingForm}" Value="True" />
-                        </MultiDataTrigger.Conditions>
-                        <Setter Property="IsDefault" Value="True" />
-                      </MultiDataTrigger>
+                      <DataTrigger Binding="{Binding ServerState}" Value="Online">
+                        <Setter Property="Fill" Value="#FF34C76A" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding ServerState}" Value="Blocked">
+                        <Setter Property="Fill" Value="#FFF2B227" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding ServerState}" Value="Offline">
+                        <Setter Property="Fill" Value="#FFE5483F" />
+                      </DataTrigger>
                     </Style.Triggers>
                   </Style>
-                </Button.Style>
-              </Button>
-              <Button Content="Cancel" Click="Cancel_Click" Height="40" Padding="18,0" Margin="10,0,0,0"
-                      Visibility="{Binding HasLastAccount, Converter={StaticResource Shown}}" />
+                </Ellipse.Style>
+              </Ellipse>
+              <TextBlock Text="{Binding ServerText}" Margin="7,0,0,1" FontSize="13" FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+              <Button Style="{StaticResource IconButton}" Content="&#xE72C;" Margin="3,0,0,0" Click="Refresh_Click"
+                      IsEnabled="{Binding CanCheck}"
+                      ToolTip="Check the server again" AutomationProperties.Name="Check the server again" />
             </StackPanel>
-          </StackPanel>
-
-          <TextBlock Text="{Binding SignUpMessage}" TextWrapping="Wrap" Margin="0,12,0,0">
-            <TextBlock.Style>
-              <Style TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
-                <Style.Triggers>
-                  <DataTrigger Binding="{Binding SignUpSucceeded}" Value="True">
-                    <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
-                  </DataTrigger>
-                  <DataTrigger Binding="{Binding SignUpMessage}" Value="{x:Null}">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                  </DataTrigger>
-                </Style.Triggers>
-              </Style>
-            </TextBlock.Style>
-          </TextBlock>
-
-          <TextBlock Style="{StaticResource Note}" Margin="0,18,0,0">
-            The game can't make accounts, so make the one you'll log in with here. Use a password you
-            don't use anywhere else: the way the game logs in means the server has to keep passwords in
-            a form it can read back. There's no password reset yet.
-          </TextBlock>
+          </Border>
+          <TextBlock Text="{Binding SignUpStateText}" Foreground="{StaticResource MutedBrush}" FontSize="12"
+                     HorizontalAlignment="Right" Margin="0,5,12,0" />
         </StackPanel>
-      </TabItem>
-    </TabControl>
+        <StackPanel>
+          <local:OutlinedText Text="BATTLE CITY" FontSize="40" FontStyle="Italic" FontWeight="Black"
+                              Fill="{StaticResource GoldBrush}" Stroke="{StaticResource InkBrush}" StrokeThickness="5"
+                              Shadow="3.5" HorizontalAlignment="Left" AutomationProperties.Name="Battle City" />
+          <StackPanel Orientation="Horizontal" Margin="1,9,0,0">
+            <Rectangle Width="136" Height="16" VerticalAlignment="Center">
+              <Rectangle.Fill>
+                <ImageBrush ImageSource="{StaticResource LevelStar}" TileMode="Tile" Stretch="Uniform"
+                            Viewport="0,0,17,16" ViewportUnits="Absolute" />
+              </Rectangle.Fill>
+            </Rectangle>
+            <TextBlock Text="Yu-Gi-Oh! Online" Margin="10,0,0,1" VerticalAlignment="Center"
+                       FontFamily="{StaticResource CardFont}" FontWeight="Bold" FontSize="15"
+                       Typography.Capitals="SmallCaps" Foreground="{StaticResource MutedBrush}" />
+          </StackPanel>
+        </StackPanel>
+      </DockPanel>
 
-    <!-- Which launcher this is, and where it comes from. -->
-    <Border Grid.Row="3" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="28,12">
-      <TextBlock HorizontalAlignment="Right" FontSize="12" Foreground="{StaticResource MutedBrush}">
-        <Run Text="{Binding VersionText, Mode=OneWay}" /> · <Hyperlink Click="Project_Click">Project page</Hyperlink>
-      </TextBlock>
-    </Border>
+      <TabControl Grid.Row="1" Margin="0,14,5,5">
+
+        <TabItem Header="Play">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Note}" Margin="0,16,0,0">
+              Log in with your Battle City account. Your UserID is case-sensitive, so type it exactly as
+              you made it. No account yet? Make one under Create account.
+            </TextBlock>
+            <StackPanel>
+              <TextBlock Text="Game folder" Style="{StaticResource Heading}" />
+              <DockPanel>
+                <Button Content="Change…" DockPanel.Dock="Right" Margin="12,0,3,3" Click="Browse_Click" />
+                <Border Background="{StaticResource FieldBrush}" BorderBrush="{StaticResource InkBrush}" BorderThickness="2"
+                        CornerRadius="8" Height="38" Padding="10,0" Margin="0,0,0,3">
+                  <TextBlock Text="{Binding GameFolderText}" ToolTip="{Binding GameFolderText}" VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis" />
+                </Border>
+              </DockPanel>
+
+              <DockPanel Margin="0,10,0,0">
+                <TextBlock DockPanel.Dock="Left" FontFamily="{StaticResource IconFont}" FontSize="14" Margin="0,2,8,0">
+                  <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                      <Setter Property="Text" Value="&#xE7BA;" />
+                      <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding GameReady}" Value="True">
+                          <Setter Property="Text" Value="&#xE73E;" />
+                          <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding GameStatusText}" TextWrapping="Wrap" />
+              </DockPanel>
+
+              <Button Style="{StaticResource AccentButton}" Content="{Binding PlayText}" IsEnabled="{Binding CanPlay}"
+                      Click="Play_Click" Height="62" Margin="0,20,4,4" FontSize="26" FontWeight="Black" FontStyle="Italic" />
+
+              <TextBlock Text="{Binding PlayError}" Foreground="{StaticResource BadBrush}" TextWrapping="Wrap" Margin="0,12,0,0">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding PlayError}" Value="{x:Null}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+            </StackPanel>
+          </DockPanel>
+        </TabItem>
+
+        <TabItem Header="Create account">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Note}" Margin="0,16,0,0">
+              The game can't make accounts, so make the one you'll log in with here. Use a password you
+              don't use anywhere else: the way the game logs in means the server has to keep passwords in
+              a form it can read back. There's no password reset yet.
+            </TextBlock>
+            <StackPanel>
+              <!-- The last account made here, until the player asks for another. -->
+              <StackPanel Visibility="{Binding ShowingLastAccount, Converter={StaticResource Shown}}">
+                <TextBlock Text="Last account created" Style="{StaticResource Heading}" />
+                <Grid HorizontalAlignment="Left" MinWidth="260" Margin="0,0,3,3">
+                  <Border Background="{StaticResource InkBrush}" CornerRadius="8" Margin="3,3,-3,-3" />
+                  <Border Background="{StaticResource FieldBrush}" BorderBrush="{StaticResource InkBrush}" BorderThickness="2"
+                          CornerRadius="8" Padding="14,7,16,8">
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="UserID" Foreground="{StaticResource MutedBrush}" FontSize="12.5"
+                                 VerticalAlignment="Center" Margin="0,2,12,0" />
+                      <TextBlock Text="{Binding LastAccount}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Border>
+                </Grid>
+                <Button Style="{StaticResource AccentButton}" Content="Create account" Click="NewAccount_Click"
+                        Height="40" Padding="22,0" Margin="0,18,0,0" HorizontalAlignment="Left" />
+              </StackPanel>
+
+              <!-- The form for a new account. -->
+              <StackPanel Visibility="{Binding ShowingForm, Converter={StaticResource Shown}}">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="142" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Grid.Row="0" Text="UserID" Style="{StaticResource FieldName}" />
+                  <TextBox x:Name="UserIdBox" Grid.Row="0" Grid.Column="1"
+                           Text="{Binding UserId, UpdateSourceTrigger=PropertyChanged}"
+                           MaxLength="16" AutomationProperties.Name="UserID" />
+                  <TextBlock Grid.Row="1" Text="Password" Style="{StaticResource FieldName}" Margin="0,10,0,0" />
+                  <PasswordBox x:Name="Password" Grid.Row="1" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
+                               AutomationProperties.Name="Password" />
+                  <TextBlock Grid.Row="2" Text="Confirm Password" Style="{StaticResource FieldName}" Margin="0,10,0,0" />
+                  <PasswordBox x:Name="Confirm" Grid.Row="2" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
+                               AutomationProperties.Name="Confirm Password" />
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Margin="142,18,0,4">
+                  <Button Content="{Binding SignUpText}" IsEnabled="{Binding CanSignUp}" Click="SignUp_Click"
+                          Height="40" Padding="22,0">
+                    <!-- Enter makes the account while the form is up on this page. -->
+                    <Button.Style>
+                      <Style TargetType="Button" BasedOn="{StaticResource AccentButton}">
+                        <Style.Triggers>
+                          <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                              <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}"
+                                         Value="True" />
+                              <Condition Binding="{Binding ShowingForm}" Value="True" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="IsDefault" Value="True" />
+                          </MultiDataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </Button.Style>
+                  </Button>
+                  <Button Content="Cancel" Click="Cancel_Click" Height="40" Padding="18,0" Margin="14,0,0,0"
+                          Visibility="{Binding HasLastAccount, Converter={StaticResource Shown}}" />
+                </StackPanel>
+              </StackPanel>
+
+              <TextBlock Text="{Binding SignUpMessage}" TextWrapping="Wrap" Margin="0,14,0,0">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding SignUpSucceeded}" Value="True">
+                        <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
+                      </DataTrigger>
+                      <DataTrigger Binding="{Binding SignUpMessage}" Value="{x:Null}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+            </StackPanel>
+          </DockPanel>
+        </TabItem>
+      </TabControl>
+
+      <!-- Which launcher this is and where it comes from, and a newer one when there is one. -->
+      <DockPanel Grid.Row="2" Margin="0,12,5,0">
+        <TextBlock DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center">
+          <Run Text="{Binding VersionText, Mode=OneWay}" /> · <Hyperlink Click="Project_Click">Project page</Hyperlink>
+        </TextBlock>
+        <Border Background="{StaticResource GoldBrush}" BorderBrush="{StaticResource InkBrush}" BorderThickness="2"
+                CornerRadius="12" Padding="10,2,12,3" HorizontalAlignment="Left"
+                Visibility="{Binding HasUpdate, Converter={StaticResource Shown}}">
+          <TextBlock FontSize="12.5" FontWeight="SemiBold">
+            <Run Text="{Binding UpdateText, Mode=OneWay}" />
+            <Hyperlink Click="Update_Click" Foreground="{StaticResource InkBrush}" TextDecorations="Underline">Download it</Hyperlink>
+          </TextBlock>
+        </Border>
+      </DockPanel>
+    </Grid>
   </Grid>
 </Window>

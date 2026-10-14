@@ -20,9 +20,12 @@ public partial class MainWindow : Window
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
-        // A dark title bar over the dark window, where Windows offers one (10 20H1 and later).
-        int dark = 1;
-        _ = DwmSetWindowAttribute(new WindowInteropHelper(this).Handle, DwmwaUseImmersiveDarkMode, ref dark, sizeof(int));
+        // The title bar in the window's own paper and ink, where Windows lets it be coloured
+        // (11 and later); elsewhere it keeps the system's.
+        var window = new WindowInteropHelper(this).Handle;
+        int paper = ColorRef(0xFB, 0xF8, 0xF1), ink = ColorRef(0x1C, 0x22, 0x30);
+        _ = DwmSetWindowAttribute(window, DwmwaCaptionColor, ref paper, sizeof(int));
+        _ = DwmSetWindowAttribute(window, DwmwaTextColor, ref ink, sizeof(int));
     }
 
     async void Play_Click(object sender, RoutedEventArgs e) => await model.PlayAsync();
@@ -69,7 +72,10 @@ public partial class MainWindow : Window
 
     void Project_Click(object sender, RoutedEventArgs e) => MainViewModel.Open(Releases.ProjectPage);
 
-    const int DwmwaUseImmersiveDarkMode = 20;
+    const int DwmwaCaptionColor = 35;
+    const int DwmwaTextColor = 36;
+
+    static int ColorRef(byte red, byte green, byte blue) => red | green << 8 | blue << 16;
 
     [DllImport("dwmapi.dll")]
     static extern int DwmSetWindowAttribute(IntPtr window, int attribute, ref int value, int size);

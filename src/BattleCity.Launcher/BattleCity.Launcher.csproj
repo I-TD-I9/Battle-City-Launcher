@@ -21,10 +21,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\BattleCity.png" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\BattleCity.Core\BattleCity.Core.csproj" />
   </ItemGroup>
 
