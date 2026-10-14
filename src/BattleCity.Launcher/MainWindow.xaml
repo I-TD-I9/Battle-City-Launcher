@@ -11,8 +11,13 @@
         Background="{StaticResource WindowBrush}" Foreground="{StaticResource TextBrush}"
         FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
 
+  <Window.Resources>
+    <BooleanToVisibilityConverter x:Key="Shown" />
+  </Window.Resources>
+
   <Grid>
     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
@@ -58,7 +63,16 @@
       </DockPanel>
     </Border>
 
-    <TabControl Grid.Row="1" Margin="28,18,28,0">
+    <!-- A newer launcher, when there is one. -->
+    <Border Grid.Row="1" Background="#332B2350" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1"
+            Padding="28,10" Visibility="{Binding HasUpdate, Converter={StaticResource Shown}}">
+      <TextBlock>
+        <Run Text="{Binding UpdateText, Mode=OneWay}" />
+        <Hyperlink Click="Update_Click">Download it</Hyperlink>
+      </TextBlock>
+    </Border>
+
+    <TabControl Grid.Row="2" Margin="28,18,28,0">
 
       <TabItem Header="Play">
         <StackPanel Margin="0,24,0,0">
@@ -165,7 +179,7 @@
     </TabControl>
 
     <!-- Who this is not, and where it comes from. -->
-    <Border Grid.Row="2" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="28,12">
+    <Border Grid.Row="3" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="28,12">
       <DockPanel>
         <TextBlock DockPanel.Dock="Right" FontSize="12" Foreground="{StaticResource MutedBrush}">
           <Run Text="{Binding VersionText, Mode=OneWay}" /> · <Hyperlink Click="Project_Click">Project page</Hyperlink>

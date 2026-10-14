@@ -42,11 +42,11 @@ public sealed class MainViewModel : ObservableObject
         signUp = new SignUpClient(http, server.Api);
     }
 
-    /// <summary>Finds the game, then asks after the server.</summary>
+    /// <summary>Finds the game, then asks after the server and the launcher's own updates.</summary>
     public async Task StartAsync()
     {
         Game = await Task.Run(() => GameLocator.Find(settings.GameFolder));
-        await CheckServerAsync();
+        await Task.WhenAll(CheckServerAsync(), CheckForUpdateAsync());
     }
 
     // --- The game --------------------------------------------------------------------------
@@ -329,6 +329,38 @@ public sealed class MainViewModel : ObservableObject
     {
         SignUpSucceeded = ok;
         SignUpMessage = message;
+    }
+
+    // --- The launcher's own updates ----------------------------------------------------------
+
+    LauncherRelease? update;
+
+    public LauncherRelease? Update
+    {
+        get => update;
+        private set
+        {
+            if (Set(ref update, value))
+                Raise(nameof(HasUpdate), nameof(UpdateText));
+        }
+    }
+
+    public bool HasUpdate => update is not null;
+
+    public string UpdateText => update is null ? "" : $"Version {update.Version} of the launcher is out.";
+
+    public async Task CheckForUpdateAsync()
+    {
+        try
+        {
+            var latest = await Releases.LatestAsync(http);
+            if (latest is not null && latest.Version > Releases.Current)
+                Update = latest;
+        }
+        catch (Exception)
+        {
+            // Like the server's status this is only news: a failure leaves the banner hidden.
+        }
     }
 
     // --- The launcher itself -----------------------------------------------------------------
