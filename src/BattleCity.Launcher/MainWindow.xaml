@@ -120,7 +120,7 @@
           </TextBlock>
 
           <TextBlock Style="{StaticResource Note}" Margin="0,18,0,0">
-            Log in with your Battle City account, exactly as you signed it up: the name is case-sensitive.
+            Log in with your Battle City account, exactly as you signed it up: your UserID is case-sensitive.
             No account yet? Make one under Create account.
           </TextBlock>
         </StackPanel>
@@ -138,15 +138,15 @@
               <RowDefinition Height="Auto" />
               <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Text="Name" VerticalAlignment="Center" />
-            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
-                     MaxLength="16" AutomationProperties.Name="Name" />
+            <TextBlock Grid.Row="0" Text="UserID" VerticalAlignment="Center" />
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding UserId, UpdateSourceTrigger=PropertyChanged}"
+                     MaxLength="16" AutomationProperties.Name="UserID" />
             <TextBlock Grid.Row="1" Text="Password" VerticalAlignment="Center" Margin="0,10,0,0" />
             <PasswordBox x:Name="Password" Grid.Row="1" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
                          AutomationProperties.Name="Password" />
-            <TextBlock Grid.Row="2" Text="Password again" VerticalAlignment="Center" Margin="0,10,0,0" />
+            <TextBlock Grid.Row="2" Text="Confirm Password" VerticalAlignment="Center" Margin="0,10,0,0" />
             <PasswordBox x:Name="Confirm" Grid.Row="2" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
-                         AutomationProperties.Name="Password again" />
+                         AutomationProperties.Name="Confirm Password" />
           </Grid>
 
           <Button Style="{StaticResource AccentButton}" Content="{Binding SignUpText}" IsEnabled="{Binding CanSignUp}"

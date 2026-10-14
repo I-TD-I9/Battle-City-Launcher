@@ -25,7 +25,7 @@ public class SignUpRulesTests
     [InlineData("Duelist\n")]
     [InlineData("Düelist")]
     public void Bad_names_are_refused(string name) =>
-        Assert.Equal("A name is 3 to 16 characters: letters, digits, _ and -, beginning with a letter or digit.",
+        Assert.Equal("A UserID is 3 to 16 characters: letters, digits, _ and -, beginning with a letter or digit.",
                      Rules.NameProblem(name));
 
     [Theory]
@@ -33,7 +33,7 @@ public class SignUpRulesTests
     [InlineData("CPU-Kaiba")]
     [InlineData("Cpu-me")]
     public void The_CPU_opponents_names_are_refused(string name) =>
-        Assert.Equal("Names beginning with cpu- belong to the server's CPU opponents.", Rules.NameProblem(name));
+        Assert.Equal("UserIDs beginning with cpu- belong to the server's CPU opponents.", Rules.NameProblem(name));
 
     [Theory]
     [InlineData("Battle-City!")]
@@ -53,7 +53,7 @@ public class SignUpRulesTests
 
     [Fact]
     public void The_password_cannot_be_the_name_in_any_case() =>
-        Assert.Equal("The password cannot be the name.", Rules.PasswordProblem("DUELIST1", "duelist1"));
+        Assert.Equal("The password cannot be the UserID.", Rules.PasswordProblem("DUELIST1", "duelist1"));
 
     [Fact]
     public void The_servers_info_reply_gives_the_rules()

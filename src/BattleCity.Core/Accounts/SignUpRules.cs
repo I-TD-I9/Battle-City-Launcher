@@ -4,9 +4,9 @@ using System.Text.RegularExpressions;
 namespace BattleCity.Accounts;
 
 /// <summary>
-/// The rules a new account's name and password follow, as the server's GET /api/info gives them.
-/// The launcher checks a sign-up against them before sending it; the server checks it again
-/// either way, and its wording is mirrored here so that both say the same thing.
+/// The rules a new account's UserID and password follow, as the server's GET /api/info gives
+/// them. The launcher checks a sign-up against them before sending it; the server checks it
+/// again either way, and its wording is mirrored here so that both say the same thing.
 /// </summary>
 public sealed record SignUpRules(bool Open, int NameMin, int NameMax, string NamePattern,
                                  int PasswordMin, int PasswordMax, string PasswordPattern)
@@ -21,9 +21,9 @@ public sealed record SignUpRules(bool Open, int NameMin, int NameMax, string Nam
     public string? NameProblem(string name)
     {
         if (name.Length < NameMin || name.Length > NameMax || !WholeMatch(NamePattern, name))
-            return $"A name is {NameMin} to {NameMax} characters: letters, digits, _ and -, beginning with a letter or digit.";
+            return $"A UserID is {NameMin} to {NameMax} characters: letters, digits, _ and -, beginning with a letter or digit.";
         if (name.StartsWith(CpuPrefix, StringComparison.OrdinalIgnoreCase))
-            return $"Names beginning with {CpuPrefix} belong to the server's CPU opponents.";
+            return $"UserIDs beginning with {CpuPrefix} belong to the server's CPU opponents.";
         return null;
     }
 
@@ -32,7 +32,7 @@ public sealed record SignUpRules(bool Open, int NameMin, int NameMax, string Nam
         if (password.Length < PasswordMin || password.Length > PasswordMax || !WholeMatch(PasswordPattern, password))
             return $"A password is {PasswordMin} to {PasswordMax} characters: letters, digits and symbols, without spaces.";
         if (string.Equals(password, name, StringComparison.OrdinalIgnoreCase))
-            return "The password cannot be the name.";
+            return "The password cannot be the UserID.";
         return null;
     }
 

@@ -23,7 +23,7 @@ It doesn't include any game files, and it isn't affiliated with Konami.
 
 A few things to know:
 
-- Your name is case-sensitive when you log in.
+- Your UserID is case-sensitive when you log in.
 - Pick a password you don't use anywhere else.
 - There's no password reset yet.
 

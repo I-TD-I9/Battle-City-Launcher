@@ -258,17 +258,17 @@ public sealed class MainViewModel : ObservableObject
 
     // --- Sign-up ---------------------------------------------------------------------------
 
-    string name = "";
-    // The name of the last sign-up that got no answer: the server may have made it all the same.
+    string userId = "";
+    // The UserID of the last sign-up that got no answer: the server may have made it all the same.
     string? unanswered;
     bool signingUp;
     string? signUpMessage;
     bool signUpSucceeded;
 
-    public string Name
+    public string UserId
     {
-        get => name;
-        set => Set(ref name, value);
+        get => userId;
+        set => Set(ref userId, value);
     }
 
     public bool SigningUp
@@ -300,8 +300,8 @@ public sealed class MainViewModel : ObservableObject
     /// <summary>Signs up the account; true once the server has made it.</summary>
     public async Task<bool> SignUpAsync(string password, string confirm)
     {
-        // Spaces are never part of a name, so stray ones around it are dropped.
-        string account = name.Trim();
+        // Spaces are never part of a UserID, so stray ones around it are dropped.
+        string account = userId.Trim();
         string? problem = rules.NameProblem(account)
                           ?? rules.PasswordProblem(password, account)
                           ?? (password == confirm ? null : "The two passwords are not the same.");
@@ -318,7 +318,7 @@ public sealed class MainViewModel : ObservableObject
         {
             var result = await signUp.RegisterAsync(account, password);
             string message = result.Ok
-                ? $"The account {result.Name} is ready. Press Play, and log in with exactly this name and password."
+                ? $"The account {result.Name} is ready. Press Play, and log in with exactly this UserID and password."
                 : result.Message;
             if (result.Error == "name_taken" && unanswered == account)
                 message += " If your last try got no answer, the account may have been made all the same: try logging in with it.";
