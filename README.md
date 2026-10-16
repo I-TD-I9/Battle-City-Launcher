@@ -1,33 +1,36 @@
+<p align="center">
+  <img src="docs/launcher.gif" width="720" alt="Making an account in the Battle City Launcher, then starting the game">
+</p>
+
 # Battle City Launcher
 
-Play Yu-Gi-Oh! Online Phase 1 again. This launcher connects your own copy of the game to Battle
-City, an unofficial server that brings its online play back.
+**It's time to duel!** Yu-Gi-Oh! Online Phase 1 went offline long ago. Battle City, a fan-made
+server, brings its online play back, and this launcher takes your copy of the game there.
 
-It doesn't include any game files, and it isn't affiliated with Konami.
-
-## What you need
+## Draw Phase: what you need
 
 - Windows 10 or 11, 64-bit
-- Yu-Gi-Oh! ONLINE installed, with its last update (June 2005)
+- Yu-Gi-Oh! ONLINE, the February 2006 version (`Ver.060110.00`), unpacked anywhere
 
-## Getting started
+## Main Phase: getting set up
 
 1. Download `BattleCityLauncher.exe` from the
    [latest release](https://github.com/I-TD-I9/Battle-City-Launcher/releases/latest) and run it.
-   There's nothing to install.
-2. If Windows warns that it doesn't recognise the app, click **More info**, then **Run anyway**.
-3. The launcher should find your game on its own. If it doesn't, click **Change…** and pick the
-   folder you installed it in.
-4. Make an account under **Create account**.
-5. Click **Play** and log in with it.
+2. If Windows says it doesn't recognise the app, click **More info**, then **Run anyway**.
+3. Click **Change…** and pick your Yu-Gi-Oh! ONLINE folder.
+4. Make your account under **Account**. You'll get a code by email to finish it.
 
-A few things to know:
+## Battle Phase: duel
 
-- Your UserID is case-sensitive when you log in.
-- Pick a password you don't use anywhere else.
-- There's no password reset yet.
+Click **Play** and log in with your new account.
 
-Your installed game is never changed.
+## End Phase: good to know
+
+- Your UserID is case-sensitive.
+- One account per email address. Forgot your password? Set a new one under **Account**.
+- Your game folder is never changed.
+
+See you in Battle City!
 
 ## Building it yourself
 
