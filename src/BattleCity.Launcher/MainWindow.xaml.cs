@@ -34,7 +34,7 @@ public partial class MainWindow : Window
 
     void Browse_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog { Title = "Choose the folder Yu-Gi-Oh! ONLINE is installed in" };
+        var dialog = new OpenFolderDialog { Title = "Choose the Yu-Gi-Oh! ONLINE folder, the one that holds online_pc.dat" };
         if (model.Game is { } game && System.IO.Directory.Exists(game.Path))
             dialog.InitialDirectory = game.Path;
         if (dialog.ShowDialog(this) == true)

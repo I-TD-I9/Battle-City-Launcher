@@ -78,9 +78,10 @@ public sealed class MainViewModel : ObservableObject
     {
         GameStatus.Ready => "Ready to play.",
         GameStatus.Unsupported => $"This copy of the game is another version. Battle City needs the February 2006 client, {SupportedClient.Version}.",
-        GameStatus.NoClient => "This folder has no online_pc.dat. Choose the folder Yu-Gi-Oh! ONLINE is installed in.",
-        GameStatus.NotFound => "This folder no longer exists. Choose the folder Yu-Gi-Oh! ONLINE is installed in.",
-        _ => "The game was not found. Choose the folder Yu-Gi-Oh! ONLINE is installed in.",
+        GameStatus.DataMissing => "The game's data is missing from this folder: it needs patch.txt and merge.dat beside online_pc.dat. Unpack the whole folder again.",
+        GameStatus.NoClient => "This folder has no online_pc.dat. Choose the Yu-Gi-Oh! ONLINE folder.",
+        GameStatus.NotFound => "This folder no longer exists. Choose the Yu-Gi-Oh! ONLINE folder.",
+        _ => "The game was not found. Choose the Yu-Gi-Oh! ONLINE folder.",
     };
 
     public bool Starting

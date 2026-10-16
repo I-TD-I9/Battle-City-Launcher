@@ -30,6 +30,7 @@ public class GameStarterTests
         try
         {
             File.Copy(RetailClient.Path!, Path.Combine(retailFolder, SupportedClient.FileName));
+            GameFolderTests.WriteData(retailFolder);
             var game = GameFolder.Inspect(retailFolder);
             Assert.Equal(GameStatus.Ready, game.Status);
 

@@ -3,7 +3,7 @@ using Microsoft.Win32;
 
 namespace BattleCity.Game;
 
-/// <summary>Finds where the player installed the game.</summary>
+/// <summary>Finds the player's game folder.</summary>
 public static class GameLocator
 {
     // Where the installer records the game. It is a 32-bit program, so on 64-bit Windows its keys
@@ -46,18 +46,22 @@ public static class GameLocator
     }
 
     /// <summary>
-    /// The first candidate holding the supported client. Failing that, the first holding some
-    /// other client, so that the player hears why it will not do; failing that, null.
+    /// The first candidate ready to play. Failing that, the first holding the supported client
+    /// without its data, then the first holding some other client, so that the player hears why
+    /// it will not do; failing that, null.
     /// </summary>
-    public static GameFolder? Find(string? chosen)
+    public static GameFolder? Find(string? chosen) => Find(Candidates(chosen), GameFolder.Inspect);
+
+    internal static GameFolder? Find(IEnumerable<string> candidates, Func<string, GameFolder> inspect)
     {
+        GameFolder? incomplete = null;
         GameFolder? other = null;
-        foreach (var folder in Candidates(chosen))
+        foreach (var folder in candidates)
         {
             GameFolder found;
             try
             {
-                found = GameFolder.Inspect(folder);
+                found = inspect(folder);
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
@@ -65,10 +69,12 @@ public static class GameLocator
             }
             if (found.Status == GameStatus.Ready)
                 return found;
-            if (found.Status == GameStatus.Unsupported)
+            if (found.Status == GameStatus.DataMissing)
+                incomplete ??= found;
+            else if (found.Status == GameStatus.Unsupported)
                 other ??= found;
         }
-        return other;
+        return incomplete ?? other;
     }
 
     static string? Registry32(string key, string value)
