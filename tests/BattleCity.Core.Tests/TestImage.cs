@@ -4,22 +4,31 @@ using System.Text;
 namespace BattleCity.Tests;
 
 /// <summary>
-/// A small PE32 image laid out like the game's client where the launcher patches it: the gate's
-/// host name in a data section at 0x71e064 and the port's instruction in a code section at
-/// 0x67a9f2. The real client cannot be part of the repository.
+/// A small PE32 image laid out like the game's client where the launcher patches it: the jump
+/// past the updater's copy at 0x4149a8, the registry root's push at 0x4a40db and the port's
+/// instruction at 0x67a9f2, each in a code section, and the gate's host name in a data section at
+/// 0x71e064. The real client cannot be part of the repository.
 /// </summary>
 static class TestImage
 {
     public const int PeOffset = 0x80;
-    public const int CodeRaw = 0x400;
-    public const int DataRaw = 0x1400;
-    public const int Length = 0x2400;
+    public const int UpdaterRaw = 0x400;
+    public const int RegistryRaw = 0x1400;
+    public const int CodeRaw = 0x2400;
+    public const int DataRaw = 0x3400;
+    public const int Length = 0x4400;
+    public const uint UpdaterRva = 0x14000;
+    public const uint RegistryRva = 0xA4000;
     public const uint CodeRva = 0x27A000;
     public const uint DataRva = 0x31E000;
 
+    public const uint UpdaterVa = 0x4149A8;
+    public const uint RegistryVa = 0x4A40DB;
     public const uint HostVa = 0x71E064;
     public const uint PortVa = 0x67A9F2;
 
+    public static int UpdaterOffset => UpdaterRaw + (int)(UpdaterVa - 0x400000 - UpdaterRva);
+    public static int RegistryOffset => RegistryRaw + (int)(RegistryVa - 0x400000 - RegistryRva);
     public static int HostOffset => DataRaw + (int)(HostVa - 0x400000 - DataRva);
     public static int PortOffset => CodeRaw + (int)(PortVa - 0x400000 - CodeRva);
     public static int ChecksumOffset => PeOffset + 24 + 64;
@@ -32,16 +41,20 @@ static class TestImage
         BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(0x3C), PeOffset);
         BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(PeOffset), 0x00004550);
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(PeOffset + 4), 0x14C);
-        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(PeOffset + 6), 2);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(PeOffset + 6), 4);
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(PeOffset + 20), 0xE0);
         int optional = PeOffset + 24;
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(optional), 0x10B);
         BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(optional + 28), 0x400000);
         int table = optional + 0xE0;
-        Section(data, table, ".text", CodeRva, 0x1000, CodeRaw, 0x1000);
+        Section(data, table, ".text", UpdaterRva, 0x1000, UpdaterRaw, 0x1000);
+        Section(data, table + 40, ".text2", RegistryRva, 0x1000, RegistryRaw, 0x1000);
+        Section(data, table + 80, ".text3", CodeRva, 0x1000, CodeRaw, 0x1000);
         // Larger in memory than on disk, as the client's own .data is.
-        Section(data, table + 40, ".data", DataRva, 0x5000, DataRaw, 0x1000);
+        Section(data, table + 120, ".data", DataRva, 0x5000, DataRaw, 0x1000);
 
+        new byte[] { 0x75, 0x3D }.CopyTo(data, UpdaterOffset);
+        new byte[] { 0x68, 0x02, 0x00, 0x00, 0x80 }.CopyTo(data, RegistryOffset);
         Encoding.ASCII.GetBytes(host).CopyTo(data, HostOffset);
         Encoding.ASCII.GetBytes("version error.").CopyTo(data, HostOffset + 0x20);
         new byte[] { 0x66, 0xC7, 0x45, 0x14 }.CopyTo(data, PortOffset);

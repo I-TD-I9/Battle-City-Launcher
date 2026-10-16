@@ -62,10 +62,11 @@ public static class GameStarter
     /// <summary>Starts the patched client at <paramref name="client"/> from the game's folder.</summary>
     public static Process Start(string client, GameFolder game)
     {
-        // The client opens its files by relative paths: patch.txt and the archives it names, and at
-        // start-up "ygo.dat" and "ygo.exe" (0x414999-0x4149e1), and Konami's ygo.exe started it as
-        // ./online_pc.dat from the install folder. So the copy runs with that folder as its working
-        // directory, wherever the copy itself lives.
+        // The client opens its game files by relative paths: patch.txt and the archives it names,
+        // the sound archives in VOICE and Region.dat, and Konami's ygo.exe started it as
+        // ./online_pc.dat from the install folder. So the copy runs with the game's folder as its
+        // working directory, wherever the copy itself lives. Its saves go to the folder ClientKey
+        // names.
         var info = new ProcessStartInfo(client)
         {
             WorkingDirectory = game.Path,

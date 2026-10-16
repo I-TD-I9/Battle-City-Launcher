@@ -177,6 +177,16 @@ public sealed class MainViewModel : ObservableObject
 
             try
             {
+                ClientKey.Prepare(ClientKey.SaveFolder, current.Path);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                PlayError = $"The launcher could not make the folder the game keeps its saves in. ({e.Message})";
+                return;
+            }
+
+            try
+            {
                 var process = GameStarter.Start(client, current);
                 Running = true;
                 process.Exited += (_, _) => ui.Post(_ => Running = false, null);

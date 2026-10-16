@@ -16,10 +16,10 @@ public static class SupportedClient
 
     /// <summary>
     /// The same file patched for <see cref="ServerEndpoints.Public"/>: the gate's host name
-    /// replaced and the PE checksum written, 31 bytes in all, as the server's own patch tool
-    /// writes it when it changes the gate's host name alone.
+    /// replaced, the registry read from HKEY_CURRENT_USER, the updater's copy jumped over, and the
+    /// PE checksum written, 33 bytes in all.
     /// </summary>
-    public const string PublicSha256 = "3c7dc09c5195354f9bae593d3f6766254c02cddb2200aee9f9fd5fed4a6bce94";
+    public const string PublicSha256 = "0df5b0588d1c095227ad1a6773a4c2e1343594ebe7c88cb2721aa2ec01181bb5";
 
     /// <summary>Whether the file at <paramref name="path"/> is the supported client.</summary>
     public static bool IsSupported(string path) =>

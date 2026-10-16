@@ -24,14 +24,36 @@ public static partial class ClientPatcher
     internal const int RetailGatePort = 5730;
     static ReadOnlySpan<byte> GatePortOpcode => [0x66, 0xC7, 0x45, 0x14];
 
-    /// <summary>A copy of <paramref name="client"/> that connects to <paramref name="server"/>'s gate.</summary>
+    // The client finds the folder it keeps its saves in, CommonDir, in the registry, and every
+    // registry access it makes goes through the one RegCreateKeyExA at 0x4a40e0, whose root is
+    // the push at 0x4a40db. That push names HKEY_LOCAL_MACHINE, where an installed game points
+    // at its install folder. The copy names HKEY_CURRENT_USER instead, under the same key, which
+    // the launcher points at a folder of its own (ClientKey).
+    internal const uint RegistryRootVa = 0x4A40DB;
+    static ReadOnlySpan<byte> PushLocalMachine => [0x68, 0x02, 0x00, 0x00, 0x80];
+    static ReadOnlySpan<byte> PushCurrentUser => [0x68, 0x01, 0x00, 0x00, 0x80];
+
+    // At start-up the client copies ygo.dat over ygo.exe in its working folder when their
+    // last-write times differ, which is how Konami's updater replaced itself. The jne at 0x4149a8,
+    // taken when there is no ygo.dat, becomes a jmp, so the copy never runs and never rewrites
+    // ygo.exe in the game's folder.
+    internal const uint UpdaterCopyVa = 0x4149A8;
+    static ReadOnlySpan<byte> JumpIfNoUpdater => [0x75, 0x3D];
+    static ReadOnlySpan<byte> JumpPastUpdater => [0xEB, 0x3D];
+
+    /// <summary>
+    /// A copy of <paramref name="client"/> that connects to <paramref name="server"/>'s gate and
+    /// keeps its saves where <see cref="Game.ClientKey"/> says.
+    /// </summary>
     public static byte[] Patch(ReadOnlySpan<byte> client, ServerEndpoints server)
     {
         var image = new PeImage(client.ToArray());
         SetGateHost(image, server.GateHost);
         SetGatePort(image, server.GatePort);
-        // The retail file leaves its checksum at zero. Writing the right one makes the copy the
-        // same file, byte for byte, as the one the server's own patch tool produces.
+        SetRegistryRoot(image);
+        SkipUpdaterCopy(image);
+        // The retail file leaves its checksum at zero; the copy gets the right one, as a valid
+        // image has.
         image.UpdateChecksum();
         return image.Bytes;
     }
@@ -62,6 +84,26 @@ public static partial class ClientPatcher
         Span<byte> value = stackalloc byte[2];
         BinaryPrimitives.WriteUInt16LittleEndian(value, (ushort)port);
         image.Write(GatePortVa + 4, value);
+    }
+
+    internal static void SetRegistryRoot(PeImage image)
+    {
+        var instruction = image.Read(RegistryRootVa, PushLocalMachine.Length);
+        if (instruction.SequenceEqual(PushCurrentUser))
+            return;
+        if (!instruction.SequenceEqual(PushLocalMachine))
+            throw new PatchException($"expected push HKEY_LOCAL_MACHINE at 0x{RegistryRootVa:x}, found {Convert.ToHexString(instruction)}");
+        image.Write(RegistryRootVa, PushCurrentUser);
+    }
+
+    internal static void SkipUpdaterCopy(PeImage image)
+    {
+        var instruction = image.Read(UpdaterCopyVa, JumpIfNoUpdater.Length);
+        if (instruction.SequenceEqual(JumpPastUpdater))
+            return;
+        if (!instruction.SequenceEqual(JumpIfNoUpdater))
+            throw new PatchException($"expected jne 0x4149e7 at 0x{UpdaterCopyVa:x}, found {Convert.ToHexString(instruction)}");
+        image.Write(UpdaterCopyVa, JumpPastUpdater);
     }
 
     /// <summary>Whether <paramref name="name"/> is a host name or an IPv4 address.</summary>

@@ -6,9 +6,7 @@ namespace BattleCity.Launcher;
 /// <summary>Whether the launcher was started with "Run as administrator".</summary>
 /// <remarks>
 /// The game must not inherit that. Run as administrator it would load DLLs from the copy's folder,
-/// which any of the player's own programs may write to, and it would save profiles in the install
-/// folder itself rather than where Windows keeps them for an ordinary run, so the two would drift
-/// apart.
+/// which any of the player's own programs may write to.
 /// </remarks>
 static class Elevation
 {

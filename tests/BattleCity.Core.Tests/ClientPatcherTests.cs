@@ -23,7 +23,7 @@ public class ClientPatcherTests
     }
 
     [Fact]
-    public void Only_the_host_slot_and_the_checksum_change_for_the_public_server()
+    public void Only_the_host_slot_the_two_code_patches_and_the_checksum_change_for_the_public_server()
     {
         var retail = TestImage.Build();
         var patched = ClientPatcher.Patch(retail, ServerEndpoints.Public);
@@ -31,12 +31,46 @@ public class ClientPatcherTests
         for (int i = 0; i < retail.Length; i++)
         {
             bool slot = i >= TestImage.HostOffset && i < TestImage.HostOffset + 32;
+            bool root = i == TestImage.RegistryOffset + 1;
+            bool jump = i == TestImage.UpdaterOffset;
             bool checksum = i >= TestImage.ChecksumOffset && i < TestImage.ChecksumOffset + 4;
-            if (!slot && !checksum)
+            if (!slot && !root && !jump && !checksum)
                 Assert.True(retail[i] == patched[i], $"byte 0x{i:x} changed");
         }
         Assert.Equal(TestImage.ReferenceChecksum(patched, TestImage.ChecksumOffset),
                      BinaryPrimitives.ReadUInt32LittleEndian(patched.AsSpan(TestImage.ChecksumOffset)));
+    }
+
+    [Fact]
+    public void The_registry_is_read_from_the_current_user()
+    {
+        var patched = ClientPatcher.Patch(TestImage.Build(), ServerEndpoints.Public);
+        // push 0x80000001, HKEY_CURRENT_USER, where the retail client pushes 0x80000002.
+        Assert.Equal([0x68, 0x01, 0x00, 0x00, 0x80], patched.AsSpan(TestImage.RegistryOffset, 5).ToArray());
+    }
+
+    [Fact]
+    public void The_updaters_copy_is_jumped_over()
+    {
+        var patched = ClientPatcher.Patch(TestImage.Build(), ServerEndpoints.Public);
+        // jmp 0x4149e7, where the retail client has jne 0x4149e7.
+        Assert.Equal([0xEB, 0x3D], patched.AsSpan(TestImage.UpdaterOffset, 2).ToArray());
+    }
+
+    [Fact]
+    public void Another_instruction_where_the_updaters_jump_should_be_is_refused()
+    {
+        var image = TestImage.Build();
+        image[TestImage.UpdaterOffset] = 0x74;
+        Assert.Throws<PatchException>(() => ClientPatcher.Patch(image, ServerEndpoints.Public));
+    }
+
+    [Fact]
+    public void Another_instruction_where_the_registry_root_should_be_is_refused()
+    {
+        var image = TestImage.Build();
+        image[TestImage.RegistryOffset + 1] = 0x03;
+        Assert.Throws<PatchException>(() => ClientPatcher.Patch(image, ServerEndpoints.Public));
     }
 
     [Fact]

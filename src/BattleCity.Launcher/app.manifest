@@ -3,7 +3,7 @@
   <assemblyIdentity version="1.0.0.0" name="BattleCity.Launcher" />
 
   <!-- An ordinary user's rights are enough: the launcher writes only to its own folder under the
-       user's local application data. -->
+       user's local application data, and to the game's registry key under the user's own. -->
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
