@@ -5,8 +5,8 @@ namespace BattleCity.Tests;
 
 /// <summary>
 /// A small PE32 image laid out like the game's client where the launcher patches it: the gate's
-/// host name in a data section at 0x6d5af8 and the port's instruction in a code section at
-/// 0x6440e2. The real client cannot be part of the repository.
+/// host name in a data section at 0x71e064 and the port's instruction in a code section at
+/// 0x67a9f2. The real client cannot be part of the repository.
 /// </summary>
 static class TestImage
 {
@@ -14,11 +14,14 @@ static class TestImage
     public const int CodeRaw = 0x400;
     public const int DataRaw = 0x1400;
     public const int Length = 0x2400;
-    public const uint CodeRva = 0x244000;
-    public const uint DataRva = 0x2D5000;
+    public const uint CodeRva = 0x27A000;
+    public const uint DataRva = 0x31E000;
 
-    public static int HostOffset => DataRaw + (int)(0x6D5AF8 - 0x400000 - DataRva);
-    public static int PortOffset => CodeRaw + (int)(0x6440E2 - 0x400000 - CodeRva);
+    public const uint HostVa = 0x71E064;
+    public const uint PortVa = 0x67A9F2;
+
+    public static int HostOffset => DataRaw + (int)(HostVa - 0x400000 - DataRva);
+    public static int PortOffset => CodeRaw + (int)(PortVa - 0x400000 - CodeRva);
     public static int ChecksumOffset => PeOffset + 24 + 64;
 
     public static byte[] Build(string host = "yugi-gate01.yugioh-online.net", ushort port = 5730)

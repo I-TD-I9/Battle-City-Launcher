@@ -1,8 +1,8 @@
 namespace BattleCity.Tests;
 
 /// <summary>
-/// The retail online_pc.dat, which the repository cannot hold: the file BATTLE_CITY_CLIENT names,
-/// or the client of an installed game.
+/// The retail online_pc.dat of February 2006, which the repository cannot hold: the file
+/// BATTLE_CITY_CLIENT names, or the client of a game folder the launcher would find itself.
 /// </summary>
 static class RetailClient
 {
@@ -24,6 +24,6 @@ sealed class RetailClientFactAttribute : FactAttribute
     public RetailClientFactAttribute()
     {
         if (RetailClient.Path is null)
-            Skip = "needs the game's online_pc.dat: install the game or set BATTLE_CITY_CLIENT to it";
+            Skip = "needs the February 2006 client's online_pc.dat: set BATTLE_CITY_CLIENT to it";
     }
 }

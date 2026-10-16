@@ -9,8 +9,8 @@ public class PeImageTests
     {
         var image = new PeImage(TestImage.Build());
         Assert.Equal(0x400000u, image.ImageBase);
-        Assert.Equal(TestImage.HostOffset, image.Offset(0x6D5AF8, 32));
-        Assert.Equal(TestImage.PortOffset, image.Offset(0x6440E2, 6));
+        Assert.Equal(TestImage.HostOffset, image.Offset(TestImage.HostVa, 32));
+        Assert.Equal(TestImage.PortOffset, image.Offset(TestImage.PortVa, 6));
         Assert.Equal(TestImage.ChecksumOffset, image.ChecksumOffset);
     }
 

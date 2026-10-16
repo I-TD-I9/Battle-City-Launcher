@@ -3,22 +3,23 @@ using System.Security.Cryptography;
 namespace BattleCity.Client;
 
 /// <summary>
-/// The one client build Battle City speaks to: online_pc.dat as the update of 23 June 2005 left
-/// it, the last Konami released. The installer records it as Version 20050623, Release
-/// koe-release.
+/// The one client build Battle City speaks to: online_pc.dat of Konami's update of 9 February
+/// 2006, which names itself Ver.060110.00 to the gate. It is the latest build that survives,
+/// and it survives only as a copy of a game folder, which no installer registers.
 /// </summary>
 public static class SupportedClient
 {
     public const string FileName = "online_pc.dat";
-    public const long Length = 3_006_464;
-    public const string Sha256 = "feb90693fb5a2e69f3d81240ba659205e25b3b2d52031c5d46494c6e07f86bd5";
+    public const string Version = "Ver.060110.00";
+    public const long Length = 3_313_664;
+    public const string Sha256 = "c57a405e6b890c17fe89551d36e6df64b56d826f101c675b67308c56381cf9c2";
 
     /// <summary>
     /// The same file patched for <see cref="ServerEndpoints.Public"/>: the gate's host name
-    /// replaced and the PE checksum written, 31 bytes in all. A client with exactly these bytes
-    /// has played on the live server.
+    /// replaced and the PE checksum written, 31 bytes in all, as the server's own patch tool
+    /// writes it when it changes the gate's host name alone.
     /// </summary>
-    public const string PublicSha256 = "046b16d9f3ac000505f661c1d4028c04d5f4d0f42041b030f58cda94ca035eca";
+    public const string PublicSha256 = "3c7dc09c5195354f9bae593d3f6766254c02cddb2200aee9f9fd5fed4a6bce94";
 
     /// <summary>Whether the file at <paramref name="path"/> is the supported client.</summary>
     public static bool IsSupported(string path) =>

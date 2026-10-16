@@ -132,7 +132,7 @@ public class ClientPatcherTests
         Assert.Throws<PatchException>(() => ClientPatcher.Patch(TestImage.Build(), ServerEndpoints.Public with { GatePort = port }));
 
     [RetailClientFact]
-    public void The_retail_client_patches_to_the_file_proven_on_the_live_server()
+    public void The_retail_client_patches_to_the_public_client()
     {
         var retail = File.ReadAllBytes(RetailClient.Path!);
         Assert.Equal(SupportedClient.Sha256, SupportedClient.HashOf(retail));
@@ -146,7 +146,7 @@ public class ClientPatcherTests
         var image = new PeImage(File.ReadAllBytes(RetailClient.Path!));
         Assert.Equal(0u, image.StoredChecksum);
         // pefile's generate_checksum() on the same file.
-        Assert.Equal(0x2E2351u, PeImage.Checksum(image.Bytes, image.ChecksumOffset));
+        Assert.Equal(0x32AB65u, PeImage.Checksum(image.Bytes, image.ChecksumOffset));
         Assert.Equal(TestImage.ReferenceChecksum(image.Bytes, image.ChecksumOffset),
                      PeImage.Checksum(image.Bytes, image.ChecksumOffset));
     }

@@ -4,9 +4,9 @@ using BattleCity.Client;
 namespace BattleCity.Game;
 
 /// <summary>
-/// Makes the patched client and starts it. The copy goes in the launcher's own folder and never
-/// over the install: that usually sits under Program Files, which only an administrator may
-/// change, and the player's own files stay as they were.
+/// Makes the patched client and starts it. The copy goes in the launcher's own folder, never in
+/// the game's: that may sit under Program Files, which only an administrator may change, and the
+/// player's own files stay as they were.
 /// </summary>
 public static class GameStarter
 {
@@ -26,7 +26,7 @@ public static class GameStarter
             throw new PatchException($"{game.Client} has changed since the launcher checked it");
         byte[] patched = ClientPatcher.Patch(retail, server);
         if (server.IsPublic && SupportedClient.HashOf(patched) != SupportedClient.PublicSha256)
-            throw new PatchException("the patched client is not the file Battle City was tested with");
+            throw new PatchException("the patched client is not the file Battle City expects");
 
         Directory.CreateDirectory(folder);
         string target = Path.Combine(folder, ClientName);
@@ -62,10 +62,10 @@ public static class GameStarter
     /// <summary>Starts the patched client at <paramref name="client"/> from the game's folder.</summary>
     public static Process Start(string client, GameFolder game)
     {
-        // The client opens its files by relative paths: at start-up it looks for "ygo.dat" and
-        // "ygo.exe" (0x412709-0x412755), and Konami's ygo.exe started it as ./online_pc.dat from
-        // the install folder. So the copy runs with that folder as its working directory, wherever
-        // the copy itself lives.
+        // The client opens its files by relative paths: patch.txt and the archives it names, and at
+        // start-up "ygo.dat" and "ygo.exe" (0x414999-0x4149e1), and Konami's ygo.exe started it as
+        // ./online_pc.dat from the install folder. So the copy runs with that folder as its working
+        // directory, wherever the copy itself lives.
         var info = new ProcessStartInfo(client)
         {
             WorkingDirectory = game.Path,

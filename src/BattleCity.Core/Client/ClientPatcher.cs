@@ -12,15 +12,15 @@ public static partial class ClientPatcher
 {
     // The gate's host name, the only game server address the client holds: the account, lobby
     // and duel servers are named by the gate's directory when the client connects. The slot is
-    // 32 bytes, up to 0x6d5b18 where "version error." begins, and the connection constructor
-    // measures the string when it runs (repne scasb at 0x644096), so any name of up to 31
+    // 32 bytes, up to 0x71e084 where "version error." begins, and the connection constructor
+    // measures the string when it runs (repne scasb at 0x67a9a6), so any name of up to 31
     // characters fits.
-    internal const uint GateHostVa = 0x6D5AF8;
+    internal const uint GateHostVa = 0x71E064;
     internal const int GateHostSlot = 0x20;
     internal const string RetailGateHost = "yugi-gate01.yugioh-online.net";
 
-    // The gate's port, the immediate of mov word ptr [ebp+0x14], 0x1662 at 0x6440e2.
-    internal const uint GatePortVa = 0x6440E2;
+    // The gate's port, the immediate of mov word ptr [ebp+0x14], 0x1662 at 0x67a9f2.
+    internal const uint GatePortVa = 0x67A9F2;
     internal const int RetailGatePort = 5730;
     static ReadOnlySpan<byte> GatePortOpcode => [0x66, 0xC7, 0x45, 0x14];
 

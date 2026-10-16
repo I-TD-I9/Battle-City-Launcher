@@ -77,7 +77,7 @@ public sealed class MainViewModel : ObservableObject
     public string GameStatusText => game?.Status switch
     {
         GameStatus.Ready => "Ready to play.",
-        GameStatus.Unsupported => "This copy of the game is another version. Battle City needs the last update, from June 2005.",
+        GameStatus.Unsupported => $"This copy of the game is another version. Battle City needs the February 2006 client, {SupportedClient.Version}.",
         GameStatus.NoClient => "This folder has no online_pc.dat. Choose the folder Yu-Gi-Oh! ONLINE is installed in.",
         GameStatus.NotFound => "This folder no longer exists. Choose the folder Yu-Gi-Oh! ONLINE is installed in.",
         _ => "The game was not found. Choose the folder Yu-Gi-Oh! ONLINE is installed in.",
