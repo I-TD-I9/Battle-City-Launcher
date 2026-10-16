@@ -234,7 +234,7 @@
     <Setter Property="SelectionBrush" Value="{StaticResource SkyBrush}" />
   </Style>
 
-  <!-- The two pages, Play and Create account, as a card: an inked gold frame with the page on
+  <!-- The two pages, Play and Account, as a card: an inked gold frame with the page on
        parchment inside, and the tab of the page on show running into the frame. -->
   <Style TargetType="TabControl">
     <Setter Property="Template">
@@ -305,6 +305,9 @@
     <Style.Triggers>
       <Trigger Property="IsMouseOver" Value="True">
         <Setter Property="TextDecorations" Value="Underline" />
+      </Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
       </Trigger>
     </Style.Triggers>
   </Style>

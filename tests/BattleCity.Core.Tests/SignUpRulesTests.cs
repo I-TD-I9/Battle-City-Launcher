@@ -56,6 +56,46 @@ public class SignUpRulesTests
         Assert.Equal("The password cannot be the UserID.", Rules.PasswordProblem("DUELIST1", "duelist1"));
 
     [Fact]
+    public void Without_a_name_only_the_passwords_own_rules_apply()
+    {
+        Assert.Null(Rules.PasswordProblem("duelist1", null));
+        Assert.NotNull(Rules.PasswordProblem("short", null));
+    }
+
+    [Theory]
+    [InlineData("duelist@example.com")]
+    [InlineData("Yugi.Muto+battle@mail.example.co.jp")]
+    [InlineData("o'brien@example.ie")]
+    public void Good_addresses_pass(string email) => Assert.Null(SignUpRules.EmailProblem(email));
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("duelist")]
+    [InlineData("duelist@")]
+    [InlineData("duelist@example")]
+    [InlineData("@example.com")]
+    [InlineData("+tag@example.com")]
+    [InlineData("due list@example.com")]
+    [InlineData("düelist@example.com")]
+    [InlineData("duelist@example.com\n")]
+    public void Bad_addresses_are_refused(string email) =>
+        Assert.Equal("That doesn't look like an email address.", SignUpRules.EmailProblem(email));
+
+    [Fact]
+    public void An_address_past_254_characters_is_refused() =>
+        Assert.NotNull(SignUpRules.EmailProblem(new string('a', 64) + "@" + string.Join(".", Enumerable.Repeat(new string('b', 60), 4)) + ".com"));
+
+    [Theory]
+    [InlineData("042917", "042917")]
+    [InlineData(" 042 917 ", "042917")]
+    [InlineData("04291", null)]
+    [InlineData("0429170", null)]
+    [InlineData("04291a", null)]
+    [InlineData("０４２９１７", null)]
+    public void A_code_is_six_digits_with_spaces_dropped(string typed, string? code) =>
+        Assert.Equal(code, SignUpRules.Code(typed));
+
+    [Fact]
     public void The_servers_info_reply_gives_the_rules()
     {
         using var json = JsonDocument.Parse("""

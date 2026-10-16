@@ -40,12 +40,12 @@ public class SignUpClientTests
     }
 
     [Fact]
-    public async Task A_sign_up_posts_the_name_and_password_as_json()
+    public async Task A_sign_up_posts_the_name_password_and_email_as_json()
     {
-        var (client, server) = Client(_ => Reply(HttpStatusCode.Created, """{"ok": true, "name": "Duelist"}"""));
-        var result = await client.RegisterAsync("Duelist", "Battle-City!");
+        var (client, server) = Client(_ => Reply(HttpStatusCode.Accepted, """{"ok": true, "name": "Duelist"}"""));
+        var result = await client.RegisterAsync("Duelist", "Battle-City!", "duelist@example.com");
         Assert.True(result.Ok);
-        Assert.Equal("Duelist", result.Name);
+        Assert.Equal(("Duelist", 202), (result.Name, result.Status));
         var (method, uri, type, body) = Assert.Single(server.Seen);
         Assert.Equal(HttpMethod.Post, method);
         Assert.Equal(new Uri("https://api.example.test/api/register"), uri);
@@ -53,6 +53,48 @@ public class SignUpClientTests
         using var json = JsonDocument.Parse(body!);
         Assert.Equal("Duelist", json.RootElement.GetProperty("name").GetString());
         Assert.Equal("Battle-City!", json.RootElement.GetProperty("password").GetString());
+        Assert.Equal("duelist@example.com", json.RootElement.GetProperty("email").GetString());
+    }
+
+    [Fact]
+    public async Task The_code_makes_the_account()
+    {
+        var (client, server) = Client(_ => Reply(HttpStatusCode.Created, """{"ok": true, "name": "Duelist"}"""));
+        var result = await client.ConfirmAsync("Duelist", "042917", "Battle-City!");
+        Assert.Equal((true, "Duelist", 201), (result.Ok, result.Name, result.Status));
+        var (_, uri, _, body) = Assert.Single(server.Seen);
+        Assert.Equal(new Uri("https://api.example.test/api/register/confirm"), uri);
+        using var json = JsonDocument.Parse(body!);
+        Assert.Equal("042917", json.RootElement.GetProperty("code").GetString());
+        Assert.Equal("Battle-City!", json.RootElement.GetProperty("password").GetString());
+    }
+
+    [Fact]
+    public async Task A_wrong_code_says_how_many_tries_are_left()
+    {
+        var (client, _) = Client(_ => Reply(HttpStatusCode.BadRequest,
+            """{"ok": false, "error": "code_wrong", "message": "That code is wrong.", "tries_left": 3}"""));
+        var result = await client.ConfirmAsync("Duelist", "000000", "Battle-City!");
+        Assert.Equal(("code_wrong", (int?)3), (result.Error, result.TriesLeft));
+    }
+
+    [Fact]
+    public async Task A_reset_asks_with_the_email_alone_and_sets_the_password_with_the_code()
+    {
+        var (client, server) = Client(request => request.RequestUri!.AbsolutePath == "/api/reset"
+            ? Reply(HttpStatusCode.Accepted, """{"ok": true}""")
+            : Reply(HttpStatusCode.OK, """{"ok": true, "name": "Duelist"}"""));
+        var asked = await client.RequestResetAsync("duelist@example.com");
+        Assert.Equal((true, (string?)null), (asked.Ok, asked.Name));
+        var reset = await client.ResetAsync("duelist@example.com", "042917", "Kaiba-Corp-1");
+        Assert.Equal((true, "Duelist"), (reset.Ok, reset.Name));
+        Assert.Equal(["/api/reset", "/api/reset/confirm"], server.Seen.Select(s => s.Uri!.AbsolutePath));
+        using var first = JsonDocument.Parse(server.Seen[0].Body!);
+        Assert.Equal(["email"], first.RootElement.EnumerateObject().Select(p => p.Name));
+        using var second = JsonDocument.Parse(server.Seen[1].Body!);
+        Assert.Equal(("duelist@example.com", "042917", "Kaiba-Corp-1"),
+                     (second.RootElement.GetProperty("email").GetString(), second.RootElement.GetProperty("code").GetString(),
+                      second.RootElement.GetProperty("password").GetString()));
     }
 
     [Fact]
@@ -60,7 +102,7 @@ public class SignUpClientTests
     {
         var (client, _) = Client(_ => Reply(HttpStatusCode.Conflict,
             """{"ok": false, "error": "name_taken", "message": "That name is taken."}"""));
-        var result = await client.RegisterAsync("Duelist", "Battle-City!");
+        var result = await client.RegisterAsync("Duelist", "Battle-City!", "duelist@example.com");
         Assert.False(result.Ok);
         Assert.Equal(("name_taken", "That name is taken.", (int?)null), (result.Error, result.Message, result.RetryAfter));
     }
@@ -70,7 +112,7 @@ public class SignUpClientTests
     {
         var (client, _) = Client(_ => Reply(HttpStatusCode.TooManyRequests,
             """{"ok": false, "error": "rate_limited", "message": "Too many. Try again in 5 minutes.", "retry_after": 300}"""));
-        var result = await client.RegisterAsync("Duelist", "Battle-City!");
+        var result = await client.RegisterAsync("Duelist", "Battle-City!", "duelist@example.com");
         Assert.Equal(("rate_limited", (int?)300), (result.Error, result.RetryAfter));
     }
 
@@ -78,7 +120,7 @@ public class SignUpClientTests
     public async Task A_proxys_error_page_reads_as_the_server_not_answering()
     {
         var (client, _) = Client(_ => Reply(HttpStatusCode.BadGateway, "<html>502 Bad gateway</html>", "text/html"));
-        var result = await client.RegisterAsync("Duelist", "Battle-City!");
+        var result = await client.RegisterAsync("Duelist", "Battle-City!", "duelist@example.com");
         Assert.Equal("server_error", result.Error);
         Assert.Contains("not answering", result.Message);
     }
@@ -87,7 +129,7 @@ public class SignUpClientTests
     public async Task No_connection_reads_as_unreachable()
     {
         var (client, _) = Client(_ => throw new HttpRequestException("no route"));
-        var result = await client.RegisterAsync("Duelist", "Battle-City!");
+        var result = await client.RegisterAsync("Duelist", "Battle-City!", "duelist@example.com");
         Assert.Equal(SignUpClient.Unreachable, result.Error);
         Assert.Null(await client.GetInfoAsync());
     }
@@ -119,7 +161,7 @@ public class SignUpClientTests
 
         var (blocked, _) = Client(_ => Labelled(HttpStatusCode.Forbidden, "<html>Blocked by policy</html>",
                                                 "text/html; charset=" + charset));
-        var result = await blocked.RegisterAsync("Duelist", "Battle-City!");
+        var result = await blocked.RegisterAsync("Duelist", "Battle-City!", "duelist@example.com");
         Assert.Equal("server_error", result.Error);
     }
 

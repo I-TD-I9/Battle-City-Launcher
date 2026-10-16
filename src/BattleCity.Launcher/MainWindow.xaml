@@ -13,6 +13,26 @@
 
   <Window.Resources>
     <BooleanToVisibilityConverter x:Key="Shown" />
+    <!-- A page's main button: Enter presses it while its page is up. -->
+    <Style x:Key="PageButton" TargetType="Button" BasedOn="{StaticResource AccentButton}">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="Padding" Value="22,0" />
+      <Style.Triggers>
+        <MultiDataTrigger>
+          <MultiDataTrigger.Conditions>
+            <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}" Value="True" />
+            <Condition Binding="{Binding IsVisible, RelativeSource={RelativeSource Self}}" Value="True" />
+          </MultiDataTrigger.Conditions>
+          <Setter Property="IsDefault" Value="True" />
+        </MultiDataTrigger>
+      </Style.Triggers>
+    </Style>
+    <!-- The buttons beside it. -->
+    <Style x:Key="SideButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Height" Value="40" />
+      <Setter Property="Padding" Value="18,0" />
+      <Setter Property="Margin" Value="14,0,0,0" />
+    </Style>
   </Window.Resources>
 
   <Grid Width="900" Height="600">
@@ -95,7 +115,7 @@
           <DockPanel>
             <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Note}" Margin="0,16,0,0">
               Log in with your Battle City account. Your UserID is case-sensitive, so type it exactly as
-              you made it. No account yet? Make one under Create account.
+              you made it. No account yet, or forgot your password? Go to Account.
             </TextBlock>
             <StackPanel>
               <TextBlock Text="Game folder" Style="{StaticResource Heading}" />
@@ -150,17 +170,17 @@
           </DockPanel>
         </TabItem>
 
-        <TabItem Header="Create account">
+        <TabItem Header="Account">
           <DockPanel>
-            <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Note}" Margin="0,16,0,0">
-              The game can't make accounts, so make the one you'll log in with here. Use a password you
-              don't use anywhere else: the way the game logs in means the server has to keep passwords in
-              a form it can read back. There's no password reset yet.
+            <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Note}" Margin="0,14,0,0">
+              Use a password you don't use anywhere else: the way the game logs in means the server has to
+              keep it in a form it can read back.
             </TextBlock>
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
             <StackPanel>
-              <!-- The last account made here, until the player asks for another. -->
+              <!-- The account made or given a new password here last, until the player asks for another. -->
               <StackPanel Visibility="{Binding ShowingLastAccount, Converter={StaticResource Shown}}">
-                <TextBlock Text="Last account created" Style="{StaticResource Heading}" />
+                <TextBlock Text="Your account" Style="{StaticResource Heading}" />
                 <Grid HorizontalAlignment="Left" MinWidth="260" Margin="0,0,3,3">
                   <Border Background="{StaticResource InkBrush}" CornerRadius="8" Margin="3,3,-3,-3" />
                   <Border Background="{StaticResource FieldBrush}" BorderBrush="{StaticResource InkBrush}" BorderThickness="2"
@@ -172,12 +192,17 @@
                     </StackPanel>
                   </Border>
                 </Grid>
-                <Button Style="{StaticResource AccentButton}" Content="Create account" Click="NewAccount_Click"
-                        Height="40" Padding="22,0" Margin="0,18,0,0" HorizontalAlignment="Left" />
+                <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                  <Button Style="{StaticResource AccentButton}" Content="Create account" Click="NewAccount_Click"
+                          Height="40" Padding="22,0" />
+                  <TextBlock VerticalAlignment="Center" Margin="20,0,0,0">
+                    <Hyperlink Click="Forgot_Click" IsEnabled="{Binding CanSubmit}">Forgot your password?</Hyperlink>
+                  </TextBlock>
+                </StackPanel>
               </StackPanel>
 
-              <!-- The form for a new account. -->
-              <StackPanel Visibility="{Binding ShowingForm, Converter={StaticResource Shown}}">
+              <!-- A new account. -->
+              <StackPanel Visibility="{Binding ShowingSignUp, Converter={StaticResource Shown}}">
                 <Grid>
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="142" />
@@ -187,44 +212,129 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                   </Grid.RowDefinitions>
                   <TextBlock Grid.Row="0" Text="UserID" Style="{StaticResource FieldName}" />
                   <TextBox x:Name="UserIdBox" Grid.Row="0" Grid.Column="1"
                            Text="{Binding UserId, UpdateSourceTrigger=PropertyChanged}"
                            MaxLength="16" AutomationProperties.Name="UserID" />
-                  <TextBlock Grid.Row="1" Text="Password" Style="{StaticResource FieldName}" Margin="0,10,0,0" />
-                  <PasswordBox x:Name="Password" Grid.Row="1" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
+                  <TextBlock Grid.Row="1" Text="Email" Style="{StaticResource FieldName}" Margin="0,8,0,0" />
+                  <TextBox Grid.Row="1" Grid.Column="1" Margin="0,8,0,0"
+                           Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
+                           MaxLength="254" AutomationProperties.Name="Email" />
+                  <TextBlock Grid.Row="2" Text="Password" Style="{StaticResource FieldName}" Margin="0,8,0,0" />
+                  <PasswordBox x:Name="Password" Grid.Row="2" Grid.Column="1" MaxLength="16" Margin="0,8,0,0"
                                AutomationProperties.Name="Password" />
-                  <TextBlock Grid.Row="2" Text="Confirm Password" Style="{StaticResource FieldName}" Margin="0,10,0,0" />
-                  <PasswordBox x:Name="Confirm" Grid.Row="2" Grid.Column="1" MaxLength="16" Margin="0,10,0,0"
+                  <TextBlock Grid.Row="3" Text="Confirm Password" Style="{StaticResource FieldName}" Margin="0,8,0,0" />
+                  <PasswordBox x:Name="Confirm" Grid.Row="3" Grid.Column="1" MaxLength="16" Margin="0,8,0,0"
                                AutomationProperties.Name="Confirm Password" />
                 </Grid>
-
-                <StackPanel Orientation="Horizontal" Margin="142,18,0,4">
-                  <Button Content="{Binding SignUpText}" IsEnabled="{Binding CanSignUp}" Click="SignUp_Click"
-                          Height="40" Padding="22,0">
-                    <!-- Enter makes the account while the form is up on this page. -->
-                    <Button.Style>
-                      <Style TargetType="Button" BasedOn="{StaticResource AccentButton}">
-                        <Style.Triggers>
-                          <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                              <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TabItem}}"
-                                         Value="True" />
-                              <Condition Binding="{Binding ShowingForm}" Value="True" />
-                            </MultiDataTrigger.Conditions>
-                            <Setter Property="IsDefault" Value="True" />
-                          </MultiDataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </Button.Style>
-                  </Button>
-                  <Button Content="Cancel" Click="Cancel_Click" Height="40" Padding="18,0" Margin="14,0,0,0"
+                <StackPanel Orientation="Horizontal" Margin="142,16,0,4">
+                  <Button Style="{StaticResource PageButton}" Content="Create account" IsEnabled="{Binding CanSubmit}"
+                          Click="SignUp_Click" />
+                  <Button Style="{StaticResource SideButton}" Content="Cancel" Click="Cancel_Click" IsEnabled="{Binding CanSubmit}"
                           Visibility="{Binding HasLastAccount, Converter={StaticResource Shown}}" />
+                  <!-- With an account made here, Cancel leads back to this link. -->
+                  <TextBlock VerticalAlignment="Center" Margin="20,0,0,0"
+                             Visibility="{Binding NoLastAccount, Converter={StaticResource Shown}}">
+                    <Hyperlink Click="Forgot_Click" IsEnabled="{Binding CanSubmit}">Forgot your password?</Hyperlink>
+                  </TextBlock>
                 </StackPanel>
               </StackPanel>
 
-              <TextBlock Text="{Binding SignUpMessage}" TextWrapping="Wrap" Margin="0,14,0,0">
+              <!-- The code mailed for it. -->
+              <StackPanel Visibility="{Binding ShowingSignUpCode, Converter={StaticResource Shown}}">
+                <TextBlock TextWrapping="Wrap">
+                  <Run Text="A code is on its way to" /> <Run Text="{Binding CodeSentTo, Mode=OneWay}" FontWeight="SemiBold" /><Run Text=". Type it here to finish making your account," />
+                  <Run Text="{Binding PendingName, Mode=OneWay}" FontWeight="SemiBold" /><Run Text="." />
+                </TextBlock>
+                <Grid Margin="0,14,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="142" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="Code" Style="{StaticResource FieldName}" />
+                  <TextBox x:Name="CodeBox" Grid.Column="1" Width="160" HorizontalAlignment="Left"
+                           Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}"
+                           MaxLength="12" AutomationProperties.Name="Code" />
+                </Grid>
+                <StackPanel Orientation="Horizontal" Margin="142,16,0,4">
+                  <Button Style="{StaticResource PageButton}" Content="Confirm" IsEnabled="{Binding CanSubmit}"
+                          Click="ConfirmSignUp_Click" />
+                  <Button Style="{StaticResource SideButton}" Content="Back" Click="Back_Click" IsEnabled="{Binding CanSubmit}" />
+                </StackPanel>
+                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap">
+                  Nothing yet? Look in your spam folder, or
+                  <Hyperlink Click="SignUpCodeAgain_Click" IsEnabled="{Binding CanSubmit}">send a new code</Hyperlink>.
+                </TextBlock>
+              </StackPanel>
+
+              <!-- A forgotten password: the account's address first. -->
+              <StackPanel Visibility="{Binding ShowingForgot, Converter={StaticResource Shown}}">
+                <TextBlock Text="Forgot your password?" Style="{StaticResource Heading}" />
+                <TextBlock TextWrapping="Wrap">
+                  Type your account's email address. The server mails it a code to set a new password, and your
+                  UserID with it.
+                </TextBlock>
+                <Grid Margin="0,14,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="142" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="Email" Style="{StaticResource FieldName}" />
+                  <TextBox x:Name="ForgotEmailBox" Grid.Column="1"
+                           Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
+                           MaxLength="254" AutomationProperties.Name="Email" />
+                </Grid>
+                <StackPanel Orientation="Horizontal" Margin="142,16,0,4">
+                  <Button Style="{StaticResource PageButton}" Content="Send code" IsEnabled="{Binding CanSubmit}"
+                          Click="ForgotSend_Click" />
+                  <Button Style="{StaticResource SideButton}" Content="Back" Click="Back_Click" IsEnabled="{Binding CanSubmit}" />
+                </StackPanel>
+              </StackPanel>
+
+              <!-- Then the code, and the new password. -->
+              <StackPanel Visibility="{Binding ShowingForgotCode, Converter={StaticResource Shown}}">
+                <TextBlock TextWrapping="Wrap">
+                  <Run Text="If" /> <Run Text="{Binding CodeSentTo, Mode=OneWay}" FontWeight="SemiBold" />
+                  <Run Text="holds an account, a code is on its way to it." />
+                </TextBlock>
+                <Grid Margin="0,14,0,0">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="142" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Grid.Row="0" Text="Code" Style="{StaticResource FieldName}" />
+                  <TextBox x:Name="ResetCodeBox" Grid.Row="0" Grid.Column="1" Width="160" HorizontalAlignment="Left"
+                           Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}"
+                           MaxLength="12" AutomationProperties.Name="Code" />
+                  <TextBlock Grid.Row="1" Text="New Password" Style="{StaticResource FieldName}" Margin="0,8,0,0" />
+                  <PasswordBox x:Name="NewPassword" Grid.Row="1" Grid.Column="1" MaxLength="16" Margin="0,8,0,0"
+                               AutomationProperties.Name="New Password" />
+                  <TextBlock Grid.Row="2" Text="Confirm Password" Style="{StaticResource FieldName}" Margin="0,8,0,0" />
+                  <PasswordBox x:Name="NewConfirm" Grid.Row="2" Grid.Column="1" MaxLength="16" Margin="0,8,0,0"
+                               AutomationProperties.Name="Confirm Password" />
+                </Grid>
+                <StackPanel Orientation="Horizontal" Margin="142,16,0,4">
+                  <Button Style="{StaticResource PageButton}" Content="Set password" IsEnabled="{Binding CanSubmit}"
+                          Click="Reset_Click" />
+                  <Button Style="{StaticResource SideButton}" Content="Back" Click="Back_Click" IsEnabled="{Binding CanSubmit}" />
+                </StackPanel>
+                <TextBlock Margin="0,10,0,0" TextWrapping="Wrap">
+                  Nothing yet? Look in your spam folder, or
+                  <Hyperlink Click="ResetCodeAgain_Click" IsEnabled="{Binding CanSubmit}">send a new code</Hyperlink>.
+                </TextBlock>
+              </StackPanel>
+
+              <TextBlock Text="Please wait…" Foreground="{StaticResource MutedBrush}" Margin="0,10,0,0"
+                         Visibility="{Binding Busy, Converter={StaticResource Shown}}" />
+
+              <TextBlock Text="{Binding SignUpMessage}" TextWrapping="Wrap" Margin="0,10,0,0">
                 <TextBlock.Style>
                   <Style TargetType="TextBlock">
                     <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
@@ -240,6 +350,7 @@
                 </TextBlock.Style>
               </TextBlock>
             </StackPanel>
+            </ScrollViewer>
           </DockPanel>
         </TabItem>
       </TabControl>

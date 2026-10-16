@@ -44,25 +44,61 @@ public partial class MainWindow : Window
     void NewAccount_Click(object sender, RoutedEventArgs e)
     {
         model.OpenForm();
-        // The box only takes focus once the form is laid out.
-        Dispatcher.BeginInvoke(() => UserIdBox.Focus(), DispatcherPriority.Input);
+        FocusLater(UserIdBox);
+    }
+
+    void Forgot_Click(object sender, RoutedEventArgs e)
+    {
+        model.OpenForgot();
+        FocusLater(ForgotEmailBox);
     }
 
     void Cancel_Click(object sender, RoutedEventArgs e)
     {
-        Password.Clear();
-        Confirm.Clear();
+        ClearPasswords();
         model.CloseForm();
     }
+
+    void Back_Click(object sender, RoutedEventArgs e) => model.Back();
 
     async void SignUp_Click(object sender, RoutedEventArgs e)
     {
         if (await model.SignUpAsync(Password.Password, Confirm.Password))
-        {
-            Password.Clear();
-            Confirm.Clear();
-        }
+            FocusLater(CodeBox);
     }
+
+    async void ConfirmSignUp_Click(object sender, RoutedEventArgs e)
+    {
+        if (await model.ConfirmSignUpAsync())
+            ClearPasswords();
+    }
+
+    async void SignUpCodeAgain_Click(object sender, RoutedEventArgs e) => await model.SendSignUpCodeAgainAsync();
+
+    async void ForgotSend_Click(object sender, RoutedEventArgs e)
+    {
+        if (await model.RequestResetAsync())
+            FocusLater(ResetCodeBox);
+    }
+
+    async void ResetCodeAgain_Click(object sender, RoutedEventArgs e) => await model.SendResetCodeAgainAsync();
+
+    async void Reset_Click(object sender, RoutedEventArgs e)
+    {
+        if (await model.ResetPasswordAsync(NewPassword.Password, NewConfirm.Password))
+            ClearPasswords();
+    }
+
+    void ClearPasswords()
+    {
+        Password.Clear();
+        Confirm.Clear();
+        NewPassword.Clear();
+        NewConfirm.Clear();
+    }
+
+    // A box only takes focus once its page is laid out.
+    void FocusLater(UIElement box) => Dispatcher.BeginInvoke(() => box.Focus(), DispatcherPriority.Input);
 
     void Update_Click(object sender, RoutedEventArgs e) => MainViewModel.Open(model.UpdatePage);
 

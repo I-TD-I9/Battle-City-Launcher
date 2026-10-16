@@ -27,13 +27,42 @@ public sealed record SignUpRules(bool Open, int NameMin, int NameMax, string Nam
         return null;
     }
 
-    public string? PasswordProblem(string password, string name)
+    /// <summary>
+    /// Why <paramref name="password"/> will not do, or null. With no <paramref name="name"/>, as
+    /// for a new password set by email before the account is known, the rule against the UserID
+    /// is left to the server.
+    /// </summary>
+    public string? PasswordProblem(string password, string? name)
     {
         if (password.Length < PasswordMin || password.Length > PasswordMax || !WholeMatch(PasswordPattern, password))
             return $"A password is {PasswordMin} to {PasswordMax} characters: letters, digits and symbols, without spaces.";
-        if (string.Equals(password, name, StringComparison.OrdinalIgnoreCase))
+        if (name is not null && string.Equals(password, name, StringComparison.OrdinalIgnoreCase))
             return "The password cannot be the UserID.";
         return null;
+    }
+
+    /// <summary>The longest email address the server takes.</summary>
+    public const int EmailMax = 254;
+
+    // The server's own test of an address: plain ASCII, as nearly every mail provider hands out.
+    const string EmailPattern = @"^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$";
+
+    public static string? EmailProblem(string email) =>
+        email.Length <= EmailMax && WholeMatch(EmailPattern, email) && !email.StartsWith('+')
+            ? null
+            : "That doesn't look like an email address.";
+
+    /// <summary>The digits in a code the server mailed.</summary>
+    public const int CodeLength = 6;
+
+    /// <summary>
+    /// The code in what the player typed, spaces dropped, as a mail client may copy it with them;
+    /// null when that is not six digits.
+    /// </summary>
+    public static string? Code(string typed)
+    {
+        string code = string.Concat(typed.Where(c => !char.IsWhiteSpace(c)));
+        return code.Length == CodeLength && code.All(char.IsAsciiDigit) ? code : null;
     }
 
     /// <summary>The rules in a GET /api/info reply, or null when it is not one.</summary>

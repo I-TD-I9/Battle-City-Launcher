@@ -20,6 +20,25 @@ public enum ServerState
     Offline,
 }
 
+/// <summary>What the account page shows.</summary>
+public enum AccountPage
+{
+    /// <summary>The last account made or given a new password here, and a button for another.</summary>
+    LastAccount,
+
+    /// <summary>UserID, email address and password for a new account.</summary>
+    SignUp,
+
+    /// <summary>The code mailed for the new account.</summary>
+    SignUpCode,
+
+    /// <summary>The email address of an account whose password is forgotten.</summary>
+    Forgot,
+
+    /// <summary>The code mailed for it, and the new password.</summary>
+    ForgotCode,
+}
+
 /// <summary>Everything the launcher's window shows and does.</summary>
 public sealed class MainViewModel : ObservableObject
 {
@@ -42,6 +61,7 @@ public sealed class MainViewModel : ObservableObject
         http = new HttpClient { Timeout = TimeSpan.FromSeconds(20), MaxResponseContentBufferSize = 1 << 20 };
         http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BattleCityLauncher", Releases.Current.ToString()));
         signUp = new SignUpClient(http, server.Api);
+        page = Start;
     }
 
     /// <summary>Finds the game, then asks after the server and the launcher's own updates.</summary>
@@ -274,15 +294,40 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    // --- Sign-up ---------------------------------------------------------------------------
+    // --- The account page ------------------------------------------------------------------
 
+    AccountPage page;
     string userId = "";
-    // The UserID of the last sign-up that got no answer: the server may have made it all the same.
-    string? unanswered;
-    bool signingUp;
-    bool formOpen;
+    string email = "";
+    string code = "";
+    bool busy;
     string? signUpMessage;
     bool signUpSucceeded;
+    // The account a mailed code is for, kept for a new code and for the confirmation.
+    (string Name, string Password, string Email)? pendingSignUp;
+    // The address a mailed code will set a new password for.
+    string? pendingReset;
+    // The UserID whose confirmation last got no answer: the server may have made it all the same.
+    string? unanswered;
+    // The same for a new password: the server may have set it all the same.
+    string? unansweredReset;
+
+    public AccountPage Page
+    {
+        get => page;
+        private set
+        {
+            if (Set(ref page, value))
+                Raise(nameof(ShowingLastAccount), nameof(ShowingSignUp), nameof(ShowingSignUpCode),
+                      nameof(ShowingForgot), nameof(ShowingForgotCode));
+        }
+    }
+
+    public bool ShowingLastAccount => page == AccountPage.LastAccount;
+    public bool ShowingSignUp => page == AccountPage.SignUp;
+    public bool ShowingSignUpCode => page == AccountPage.SignUpCode;
+    public bool ShowingForgot => page == AccountPage.Forgot;
+    public bool ShowingForgotCode => page == AccountPage.ForgotCode;
 
     public string UserId
     {
@@ -290,44 +335,43 @@ public sealed class MainViewModel : ObservableObject
         set => Set(ref userId, value);
     }
 
-    /// <summary>The UserID of the last account made with the launcher, or null before the first.</summary>
+    public string Email
+    {
+        get => email;
+        set => Set(ref email, value);
+    }
+
+    public string Code
+    {
+        get => code;
+        set => Set(ref code, value);
+    }
+
+    /// <summary>The address the last code went to.</summary>
+    public string? CodeSentTo => page == AccountPage.ForgotCode ? pendingReset : pendingSignUp?.Email;
+
+    /// <summary>The UserID the code on the page will make.</summary>
+    public string? PendingName => pendingSignUp?.Name;
+
+    /// <summary>The UserID of the last account made or given a new password here, or null before the first.</summary>
     public string? LastAccount => settings.LastAccount;
 
     public bool HasLastAccount => !string.IsNullOrWhiteSpace(settings.LastAccount);
 
-    // Once an account has been made here, the Create account page shows it, and the form only
-    // comes up when the player asks for another.
-    public bool ShowingForm => formOpen || !HasLastAccount;
+    public bool NoLastAccount => !HasLastAccount;
 
-    public bool ShowingLastAccount => !ShowingForm;
-
-    public void OpenForm()
+    /// <summary>A request to the server is on its way, and the page's buttons wait for it.</summary>
+    public bool Busy
     {
-        formOpen = true;
-        SignUpMessage = null;
-        Raise(nameof(ShowingForm), nameof(ShowingLastAccount));
-    }
-
-    public void CloseForm()
-    {
-        formOpen = false;
-        SignUpMessage = null;
-        Raise(nameof(ShowingForm), nameof(ShowingLastAccount));
-    }
-
-    public bool SigningUp
-    {
-        get => signingUp;
+        get => busy;
         private set
         {
-            if (Set(ref signingUp, value))
-                Raise(nameof(CanSignUp), nameof(SignUpText));
+            if (Set(ref busy, value))
+                Raise(nameof(CanSubmit));
         }
     }
 
-    public bool CanSignUp => !signingUp;
-
-    public string SignUpText => signingUp ? "Creating the account" : "Create account";
+    public bool CanSubmit => !busy;
 
     public string? SignUpMessage
     {
@@ -341,16 +385,73 @@ public sealed class MainViewModel : ObservableObject
         private set => Set(ref signUpSucceeded, value);
     }
 
-    /// <summary>Signs up the account; true once the server has made it.</summary>
+    // Once an account has been made here, the page shows it, and the form only comes up when the
+    // player asks for another.
+    AccountPage Start => HasLastAccount ? AccountPage.LastAccount : AccountPage.SignUp;
+
+    // While a request is on its way the page stays where it is, so that its answer lands on the
+    // page that asked.
+    public void OpenForm()
+    {
+        if (!busy)
+            Show(AccountPage.SignUp);
+    }
+
+    public void CloseForm()
+    {
+        if (busy)
+            return;
+        pendingSignUp = null;
+        pendingReset = null;
+        Show(Start);
+    }
+
+    public void OpenForgot()
+    {
+        if (!busy)
+            Show(AccountPage.Forgot);
+    }
+
+    /// <summary>From a code back to the form that asked for it, and from a form to the start.</summary>
+    public void Back()
+    {
+        if (busy)
+            return;
+        if (page == AccountPage.SignUpCode)
+            Show(AccountPage.SignUp);
+        else if (page == AccountPage.ForgotCode)
+            Show(AccountPage.Forgot);
+        else
+            CloseForm();
+    }
+
+    void Show(AccountPage next)
+    {
+        Code = "";
+        SignUpMessage = null;
+        Page = next;
+        Raise(nameof(CodeSentTo), nameof(PendingName));
+    }
+
+    string? Unusable =>
+        outdated ? "This launcher is out of date. Download the new one to go on." : null;
+
+    const string CodeShape = "The code is the 6 digits in the email.";
+    const string Mismatch = "The two passwords are not the same.";
+    const string Ready = "Your account is ready. Press Play and log in with this UserID and your password.";
+    const string MadeAnyway = " If your last try got no answer, the account may have been made all the same: try logging in with it.";
+
+    /// <summary>Asks the server for the account, which mails a code to its address; true once it has.</summary>
     public async Task<bool> SignUpAsync(string password, string confirm)
     {
-        // Spaces are never part of a UserID, so stray ones around it are dropped.
+        // Spaces are never part of a UserID or an address, so stray ones around them are dropped.
         string account = userId.Trim();
-        string? problem = outdated
-            ? "This launcher is out of date. Download the new one to make an account."
-            : rules.NameProblem(account)
-              ?? rules.PasswordProblem(password, account)
-              ?? (password == confirm ? null : "The two passwords are not the same.");
+        string address = email.Trim();
+        string? problem = Unusable
+                          ?? rules.NameProblem(account)
+                          ?? SignUpRules.EmailProblem(address)
+                          ?? rules.PasswordProblem(password, account)
+                          ?? (password == confirm ? null : Mismatch);
         if (problem is null && rulesKnown && !rules.Open)
             problem = "Sign-up is closed for now.";
         if (problem is not null)
@@ -358,32 +459,205 @@ public sealed class MainViewModel : ObservableObject
             Tell(problem, ok: false);
             return false;
         }
-
-        SigningUp = true;
-        try
+        if (await RequestAsync(() => signUp.RegisterAsync(account, password, address)) is not { } result)
+            return false;
+        if (!result.Ok)
         {
-            var result = await signUp.RegisterAsync(account, password);
-            if (result.Ok)
-            {
-                settings.LastAccount = result.Name ?? account;
-                SaveSettings();
-                UserId = "";
-                unanswered = null;
-                formOpen = false;
-                Raise(nameof(LastAccount), nameof(HasLastAccount), nameof(ShowingForm), nameof(ShowingLastAccount));
-                Tell("Your account is ready. Press Play and log in with this UserID and your password.", ok: true);
-                return true;
-            }
-            string message = result.Message;
-            if (result.Error == "name_taken" && unanswered == account)
-                message += " If your last try got no answer, the account may have been made all the same: try logging in with it.";
-            unanswered = result.Error == SignUpClient.Unreachable ? account : null;
+            if (result.Error == "email_taken")
+                ToForgot(address);
+            else
+                Tell(result.Message, ok: false);
+            return false;
+        }
+        // A server from before codes makes the account at once, and says so with 201.
+        if (result.Status == 201)
+        {
+            Made(result.Name ?? account);
+            return true;
+        }
+        pendingSignUp = (account, password, address);
+        Show(AccountPage.SignUpCode);
+        return true;
+    }
+
+    void Made(string name)
+    {
+        pendingSignUp = null;
+        unanswered = null;
+        UserId = "";
+        Email = "";
+        Remember(name);
+        Tell(Ready, ok: true);
+    }
+
+    // The address already holds an account: the page that sets its password, the address filled in.
+    void ToForgot(string address)
+    {
+        pendingSignUp = null;
+        Email = address;
+        Show(AccountPage.Forgot);
+        Tell("That email address already has an account. If it's yours, ask for a code here to set a new password.", ok: false);
+    }
+
+    /// <summary>Sends the code the player typed; true once the server has made the account.</summary>
+    public async Task<bool> ConfirmSignUpAsync()
+    {
+        if (pendingSignUp is not { } pending)
+        {
+            Show(AccountPage.SignUp);
+            return false;
+        }
+        if (SignUpRules.Code(code) is not { } typed)
+        {
+            Tell(CodeShape, ok: false);
+            return false;
+        }
+        if (await RequestAsync(() => signUp.ConfirmAsync(pending.Name, typed, pending.Password)) is not { } result)
+            return false;
+        if (result.Ok)
+        {
+            Made(result.Name ?? pending.Name);
+            return true;
+        }
+        string message = Refusal(result);
+        if (result.Error is "code_expired" or "name_taken" && unanswered == pending.Name)
+            message += MadeAnyway;
+        unanswered = result.Error == SignUpClient.Unreachable ? pending.Name : null;
+        if (result.Error == "email_taken")
+        {
+            ToForgot(pending.Email);
+            return false;
+        }
+        // Someone else made an account of that name first: back to the form to pick another.
+        if (result.Error == "name_taken")
+        {
+            pendingSignUp = null;
+            Show(AccountPage.SignUp);
+        }
+        Tell(message, ok: false);
+        return false;
+    }
+
+    /// <summary>Asks the server to mail the account's code again, which makes the last one useless.</summary>
+    public async Task SendSignUpCodeAgainAsync()
+    {
+        if (pendingSignUp is not { } pending
+            || await RequestAsync(() => signUp.RegisterAsync(pending.Name, pending.Password, pending.Email)) is not { } result)
+            return;
+        Code = "";
+        if (result.Ok)
+            Tell("A new code is on its way.", ok: true);
+        else
+            Tell(result.Message + (result.Error == "name_taken" && unanswered == pending.Name ? MadeAnyway : ""), ok: false);
+    }
+
+    /// <summary>Asks for a code to set a new password; true once the server has taken the request.</summary>
+    public async Task<bool> RequestResetAsync()
+    {
+        string address = email.Trim();
+        if ((Unusable ?? SignUpRules.EmailProblem(address)) is { } problem)
+        {
+            Tell(problem, ok: false);
+            return false;
+        }
+        if (await RequestAsync(() => signUp.RequestResetAsync(address)) is not { } result)
+            return false;
+        if (!result.Ok)
+        {
+            Tell(result.Message, ok: false);
+            return false;
+        }
+        pendingReset = address;
+        Show(AccountPage.ForgotCode);
+        return true;
+    }
+
+    /// <summary>Asks the server to mail the reset code again.</summary>
+    public async Task SendResetCodeAgainAsync()
+    {
+        if (pendingReset is not { } address
+            || await RequestAsync(() => signUp.RequestResetAsync(address)) is not { } result)
+            return;
+        Code = "";
+        if (result.Ok)
+            Tell("If that address holds an account, a new code is on its way to it.", ok: true);
+        else
+            Tell(result.Message, ok: false);
+    }
+
+    /// <summary>Sets the new password with the mailed code; true once the server has.</summary>
+    public async Task<bool> ResetPasswordAsync(string password, string confirm)
+    {
+        if (pendingReset is not { } address)
+        {
+            Show(AccountPage.Forgot);
+            return false;
+        }
+        string? typed = SignUpRules.Code(code);
+        string? problem = Unusable
+                          ?? (typed is null ? CodeShape : null)
+                          ?? rules.PasswordProblem(password, null)
+                          ?? (password == confirm ? null : Mismatch);
+        if (problem is not null)
+        {
+            Tell(problem, ok: false);
+            return false;
+        }
+        if (await RequestAsync(() => signUp.ResetAsync(address, typed!, password)) is not { } result)
+            return false;
+        if (!result.Ok)
+        {
+            string message = Refusal(result);
+            if (result.Error == "code_expired" && unansweredReset == address)
+                message += " If your last try got no answer, your new password may be set all the same: try logging in with it.";
+            unansweredReset = result.Error == SignUpClient.Unreachable ? address : null;
             Tell(message, ok: false);
             return false;
         }
+        unansweredReset = null;
+        pendingReset = null;
+        Email = "";
+        if (result.Name is { } name)
+        {
+            Remember(name);
+            Tell($"Your password is changed. Press Play and log in as {name} with it.", ok: true);
+        }
+        else
+        {
+            Show(Start);
+            Tell("Your password is changed.", ok: true);
+        }
+        return true;
+    }
+
+    // The account the player now holds, shown on the page from here on.
+    void Remember(string name)
+    {
+        settings.LastAccount = name;
+        SaveSettings();
+        Raise(nameof(LastAccount), nameof(HasLastAccount), nameof(NoLastAccount));
+        Show(AccountPage.LastAccount);
+    }
+
+    // A wrong code says how many tries it has left.
+    static string Refusal(SignUpResult result) =>
+        result.Error == "code_wrong" && result.TriesLeft is int left
+            ? result.Message + (left == 1 ? " One try left." : $" {left} tries left.")
+            : result.Message;
+
+    async Task<SignUpResult?> RequestAsync(Func<Task<SignUpResult>> request)
+    {
+        if (busy)
+            return null;
+        Busy = true;
+        SignUpMessage = null;
+        try
+        {
+            return await request();
+        }
         finally
         {
-            SigningUp = false;
+            Busy = false;
         }
     }
 
