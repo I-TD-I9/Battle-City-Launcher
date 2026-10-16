@@ -60,18 +60,22 @@ public static class GameStarter
     }
 
     /// <summary>Starts the patched client at <paramref name="client"/> from the game's folder.</summary>
-    public static Process Start(string client, GameFolder game)
+    public static Process Start(string client, GameFolder game) =>
+        Process.Start(StartInfo(client, game)) ?? throw new InvalidOperationException("Windows did not start the game");
+
+    internal static ProcessStartInfo StartInfo(string client, GameFolder game) => new(client)
     {
         // The client opens its game files by relative paths: patch.txt and the archives it names,
         // the sound archives in VOICE and Region.dat, and Konami's ygo.exe started it as
         // ./online_pc.dat from the install folder. So the copy runs with the game's folder as its
         // working directory, wherever the copy itself lives. Its saves go to the folder ClientKey
         // names.
-        var info = new ProcessStartInfo(client)
-        {
-            WorkingDirectory = game.Path,
-            UseShellExecute = false,
-        };
-        return Process.Start(info) ?? throw new InvalidOperationException("Windows did not start the game");
-    }
+        WorkingDirectory = game.Path,
+        // A new profile starts in full screen at 16 bits a pixel (0x5fbc5b), a mode today's
+        // Windows often shows as a blank screen, and ClientKey starts every player on a new
+        // profile. -win runs the game in a window instead, whatever the profile says (read at
+        // 0x4164b5, taken at 0x4150d1).
+        Arguments = "-win",
+        UseShellExecute = false,
+    };
 }

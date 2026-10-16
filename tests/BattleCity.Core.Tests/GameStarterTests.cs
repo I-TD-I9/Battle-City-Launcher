@@ -21,6 +21,15 @@ public class GameStarterTests
         }
     }
 
+    [Fact]
+    public void The_game_runs_in_a_window_from_its_own_folder()
+    {
+        var info = GameStarter.StartInfo(@"C:\Launcher\online_pc.exe", new GameFolder(@"D:\Games\Yu-Gi-Oh! ONLINE", GameStatus.Ready, null));
+        Assert.Equal((@"C:\Launcher\online_pc.exe", @"D:\Games\Yu-Gi-Oh! ONLINE", "-win"),
+                     (info.FileName, info.WorkingDirectory, info.Arguments));
+        Assert.False(info.UseShellExecute);
+    }
+
     [RetailClientFact]
     public void Prepare_writes_the_patched_copy_once()
     {
