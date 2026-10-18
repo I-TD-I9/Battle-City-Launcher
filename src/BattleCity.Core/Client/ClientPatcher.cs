@@ -41,9 +41,43 @@ public static partial class ClientPatcher
     static ReadOnlySpan<byte> JumpIfNoUpdater => [0x75, 0x3D];
     static ReadOnlySpan<byte> JumpPastUpdater => [0xEB, 0x3D];
 
+    // Before the client offers to activate a card, sub_5e2290 looks the card up in its routine
+    // records, and it turns away one that has neither a main record (0x5e22af) nor a secondary
+    // one: the je at 0x5e2338 leads to its refusal at 0x5e23ce, xor eax, eax and ret. Hundreds of
+    // the client's cards have no record at all. Aimed at 0x5e23df instead, mov eax, 1 and ret, the
+    // jump accepts such a card, so the client offers its activation and the server decides, as it
+    // does for every other card. Online the client never runs a card's own routines (the records'
+    // slots 1, 4 and 5 belong to the chain and resolution runners, which the server never starts),
+    // so nothing runs that did not before.
+    internal const uint RecordlessCheckVa = 0x5E2338;
+    static ReadOnlySpan<byte> RefuseRecordless => [0x0F, 0x84, 0x90, 0x00, 0x00, 0x00];
+    static ReadOnlySpan<byte> AcceptRecordless => [0x0F, 0x84, 0xA1, 0x00, 0x00, 0x00];
+
+    // The client makes its DirectDraw object in one place, the CoCreateInstance at 0x4db103 in
+    // sub_4db0f0, and COM loads the system's ddraw.dll by its full path, so a DirectDraw wrapper
+    // beside the client would never be used. The call goes instead to a stub in the zeros at the
+    // end of .text, which loads ddraw.dll by name first: LoadLibraryA takes a wrapper from the
+    // client's own folder when there is one there, and otherwise the system's DLL, the one COM
+    // loads a moment later anyway, so without a wrapper the game runs as it always has. The stub
+    // then jumps on to CoCreateInstance, which returns to the nop after the call, at 0x4db108.
+    internal const uint DirectDrawCallVa = 0x4DB103;
+    internal const uint WrapperStubVa = 0x6ECFD0;
+    // call [0x6ed3e0], the import table's slot for CoCreateInstance.
+    static ReadOnlySpan<byte> CallCoCreateInstance => [0xFF, 0x15, 0xE0, 0xD3, 0x6E, 0x00];
+    // call 0x6ecfd0; nop
+    static ReadOnlySpan<byte> CallWrapperStub => [0xE8, 0xC8, 0x1E, 0x21, 0x00, 0x90];
+    static ReadOnlySpan<byte> WrapperStub =>
+    [
+        0x68, 0xE1, 0xCF, 0x6E, 0x00,        // push 0x6ecfe1, the name below
+        0xFF, 0x15, 0x38, 0xD2, 0x6E, 0x00,  // call [0x6ed238], LoadLibraryA
+        0xFF, 0x25, 0xE0, 0xD3, 0x6E, 0x00,  // jmp [0x6ed3e0], CoCreateInstance
+        0x64, 0x64, 0x72, 0x61, 0x77, 0x2E, 0x64, 0x6C, 0x6C, 0x00,  // "ddraw.dll"
+    ];
+
     /// <summary>
-    /// A copy of <paramref name="client"/> that connects to <paramref name="server"/>'s gate and
-    /// keeps its saves where <see cref="Game.ClientKey"/> says.
+    /// A copy of <paramref name="client"/> that connects to <paramref name="server"/>'s gate,
+    /// keeps its saves where <see cref="Game.ClientKey"/> says, offers to activate the cards it
+    /// has no routines for, and loads a DirectDraw wrapper put beside it.
     /// </summary>
     public static byte[] Patch(ReadOnlySpan<byte> client, ServerEndpoints server)
     {
@@ -52,6 +86,8 @@ public static partial class ClientPatcher
         SetGatePort(image, server.GatePort);
         SetRegistryRoot(image);
         SkipUpdaterCopy(image);
+        AcceptRecordlessActivation(image);
+        LoadWrapperFirst(image);
         // The retail file leaves its checksum at zero; the copy gets the right one, as a valid
         // image has.
         image.UpdateChecksum();
@@ -104,6 +140,45 @@ public static partial class ClientPatcher
         if (!instruction.SequenceEqual(JumpIfNoUpdater))
             throw new PatchException($"expected jne 0x4149e7 at 0x{UpdaterCopyVa:x}, found {Convert.ToHexString(instruction)}");
         image.Write(UpdaterCopyVa, JumpPastUpdater);
+    }
+
+    internal static void AcceptRecordlessActivation(PeImage image)
+    {
+        var instruction = image.Read(RecordlessCheckVa, RefuseRecordless.Length);
+        if (instruction.SequenceEqual(AcceptRecordless))
+            return;
+        if (!instruction.SequenceEqual(RefuseRecordless))
+            throw new PatchException($"expected je 0x5e23ce at 0x{RecordlessCheckVa:x}, found {Convert.ToHexString(instruction)}");
+        image.Write(RecordlessCheckVa, AcceptRecordless);
+    }
+
+    internal static void LoadWrapperFirst(PeImage image)
+    {
+        var stub = image.Read(WrapperStubVa, WrapperStub.Length);
+        if (!stub.SequenceEqual(WrapperStub))
+        {
+            if (stub.ContainsAnyExcept((byte)0))
+                throw new PatchException($"expected zeros at 0x{WrapperStubVa:x}, found {Convert.ToHexString(stub)}");
+            image.Write(WrapperStubVa, WrapperStub);
+        }
+
+        // In memory .text ends at 0x6ec792, where its header's size, 0x2eb792, runs out; its bytes
+        // on disk go on to 0x6ed000, the rest of them padding. Given its size on disk instead, the
+        // section takes the stub in.
+        var text = image.SectionNamed(".text");
+        ulong start = (ulong)image.ImageBase + text.VirtualAddress;
+        ulong end = (ulong)WrapperStubVa + (uint)WrapperStub.Length;
+        if (WrapperStubVa < start || end > start + text.RawSize)
+            throw new PatchException($"the stub at 0x{WrapperStubVa:x} is not in the bytes of .text");
+        if (end > start + text.VirtualSize)
+            image.SetVirtualSize(".text", text.RawSize);
+
+        var call = image.Read(DirectDrawCallVa, CallCoCreateInstance.Length);
+        if (call.SequenceEqual(CallWrapperStub))
+            return;
+        if (!call.SequenceEqual(CallCoCreateInstance))
+            throw new PatchException($"expected call [0x6ed3e0] at 0x{DirectDrawCallVa:x}, found {Convert.ToHexString(call)}");
+        image.Write(DirectDrawCallVa, CallWrapperStub);
     }
 
     /// <summary>Whether <paramref name="name"/> is a host name or an IPv4 address.</summary>

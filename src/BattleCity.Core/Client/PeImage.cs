@@ -11,9 +11,14 @@ public sealed class PeImage
 {
     readonly byte[] data;
     readonly Section[] sections;
+    readonly int sectionTable;
 
-    readonly record struct Section(string Name, uint VirtualSize, uint VirtualAddress, uint RawSize,
-                                   uint RawOffset);
+    /// <summary>
+    /// A section as its header gives it: where it starts in memory and how far it reaches there,
+    /// and where its bytes lie in the file.
+    /// </summary>
+    public readonly record struct Section(string Name, uint VirtualSize, uint VirtualAddress, uint RawSize,
+                                          uint RawOffset);
 
     /// <summary>Reads the headers of <paramref name="data"/>, which the image then changes in place.</summary>
     public PeImage(byte[] data)
@@ -37,6 +42,7 @@ public sealed class PeImage
         int table = optional + optionalSize;
         if (count == 0 || table + count * 40 > data.Length)
             throw new PatchException("the file's section table runs past its end");
+        sectionTable = table;
         sections = new Section[count];
         for (int i = 0; i < count; i++)
         {
@@ -80,6 +86,35 @@ public sealed class PeImage
     public ReadOnlySpan<byte> Read(uint va, int count) => data.AsSpan(Offset(va, count), count);
 
     public void Write(uint va, ReadOnlySpan<byte> bytes) => bytes.CopyTo(data.AsSpan(Offset(va, bytes.Length)));
+
+    /// <summary>The section called <paramref name="name"/>, which the file must have once.</summary>
+    public Section SectionNamed(string name) => sections[IndexOf(name)];
+
+    /// <summary>
+    /// Sets how far the section called <paramref name="name"/> reaches in memory. Code written
+    /// past that size, into the padding that fills the section's bytes on disk out to the file's
+    /// alignment, lies outside the section until the size covers it.
+    /// </summary>
+    public void SetVirtualSize(string name, uint size)
+    {
+        int i = IndexOf(name);
+        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(sectionTable + i * 40 + 8), size);
+        sections[i] = sections[i] with { VirtualSize = size };
+    }
+
+    int IndexOf(string name)
+    {
+        int found = -1;
+        for (int i = 0; i < sections.Length; i++)
+        {
+            if (sections[i].Name != name)
+                continue;
+            if (found >= 0)
+                throw new PatchException($"the file has more than one section called {name}");
+            found = i;
+        }
+        return found >= 0 ? found : throw new PatchException($"the file has no section called {name}");
+    }
 
     public void UpdateChecksum() =>
         BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(ChecksumOffset), Checksum(data, ChecksumOffset));

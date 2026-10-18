@@ -15,6 +15,54 @@ public class PeImageTests
     }
 
     [Fact]
+    public void Padding_past_a_sections_size_in_memory_maps_to_its_bytes_on_disk()
+    {
+        var image = new PeImage(TestImage.Build());
+        Assert.Equal(TestImage.StubOffset, image.Offset(TestImage.StubVa, 27));
+        // The last byte on disk, and none past it.
+        Assert.Equal(TestImage.TextRaw + 0xFFF, image.Offset(0x6ECFFF, 1));
+        Assert.Throws<PatchException>(() => image.Offset(0x6ECFFF, 2));
+    }
+
+    [Fact]
+    public void Sections_are_found_by_name()
+    {
+        var image = new PeImage(TestImage.Build());
+        Assert.Equal(new PeImage.Section(".data", 0x5000, TestImage.DataRva, 0x1000, TestImage.DataRaw),
+                     image.SectionNamed(".data"));
+        Assert.Equal(new PeImage.Section(".text", TestImage.TextVirtualSize, TestImage.TextRva, 0x1000, TestImage.TextRaw),
+                     image.SectionNamed(".text"));
+        Assert.Throws<PatchException>(() => image.SectionNamed(".rsrc"));
+        Assert.Throws<PatchException>(() => image.SectionNamed(".TEXT"));
+    }
+
+    [Fact]
+    public void A_name_two_sections_share_is_refused()
+    {
+        var data = TestImage.Build();
+        // .text5 becomes a second .text.
+        data[TestImage.TextVirtualSizeOffset - 40 - 8 + 5] = 0;
+        Assert.Throws<PatchException>(() => new PeImage(data).SectionNamed(".text"));
+    }
+
+    [Fact]
+    public void SetVirtualSize_writes_the_sections_header()
+    {
+        var data = TestImage.Build();
+        var image = new PeImage(data);
+        image.SetVirtualSize(".text", 0x1000);
+        Assert.Equal(0x1000u, image.SectionNamed(".text").VirtualSize);
+        Assert.Equal([0x00, 0x10, 0x00, 0x00], data.AsSpan(TestImage.TextVirtualSizeOffset, 4).ToArray());
+        Assert.Equal(0x1000u, new PeImage(data).SectionNamed(".text").VirtualSize);
+        // Nothing else in the header moves.
+        var before = TestImage.Build();
+        for (int i = 0; i < 0x400; i++)
+            if (i < TestImage.TextVirtualSizeOffset || i >= TestImage.TextVirtualSizeOffset + 4)
+                Assert.True(before[i] == data[i], $"byte 0x{i:x} changed");
+        Assert.Equal(TestImage.StubOffset, image.Offset(TestImage.StubVa, 27));
+    }
+
+    [Fact]
     public void An_address_outside_every_section_is_refused()
     {
         var image = new PeImage(TestImage.Build());
