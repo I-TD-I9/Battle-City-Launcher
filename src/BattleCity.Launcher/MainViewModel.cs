@@ -7,6 +7,7 @@ using BattleCity.Accounts;
 using BattleCity.Client;
 using BattleCity.Display;
 using BattleCity.Game;
+using BattleCity.Pictures;
 
 namespace BattleCity.Launcher;
 
@@ -47,6 +48,7 @@ public sealed class MainViewModel : ObservableObject
     readonly ServerEndpoints server;
     readonly HttpClient http;
     readonly SignUpClient signUp;
+    readonly CardPictures pictures;
     // The window's thread, where a game that exits on its own is reported back.
     readonly SynchronizationContext ui = SynchronizationContext.Current ?? new SynchronizationContext();
 
@@ -58,10 +60,12 @@ public sealed class MainViewModel : ObservableObject
     public MainViewModel()
     {
         server = settings.Server();
-        // Every reply the launcher reads is a few kilobytes; nothing bigger is held in memory.
+        // Every reply the launcher reads whole is a few kilobytes, and nothing bigger is held in
+        // memory: the card pictures are read as they come (CardPictures).
         http = new HttpClient { Timeout = TimeSpan.FromSeconds(20), MaxResponseContentBufferSize = 1 << 20 };
         http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BattleCityLauncher", Releases.Current.ToString()));
         signUp = new SignUpClient(http, server.Api);
+        pictures = new CardPictures(http, server.Api);
         page = Start;
     }
 
@@ -180,6 +184,7 @@ public sealed class MainViewModel : ObservableObject
         if (game is not { Status: GameStatus.Ready } current || !CanPlay)
             return;
         PlayError = null;
+        PicturesText = null;
         Starting = true;
         try
         {
@@ -222,6 +227,8 @@ public sealed class MainViewModel : ObservableObject
                 return;
             }
 
+            string start = await PreparePicturesAsync(current);
+
             try
             {
                 ClientKey.Prepare(ClientKey.SaveFolder, current.Path);
@@ -234,7 +241,7 @@ public sealed class MainViewModel : ObservableObject
 
             try
             {
-                var process = GameStarter.Start(client, current, resolution, home);
+                var process = GameStarter.Start(client, start, resolution, home);
                 Running = true;
                 process.Exited += (_, _) => ui.Post(_ => Running = false, null);
                 process.EnableRaisingEvents = true;
@@ -256,6 +263,73 @@ public sealed class MainViewModel : ObservableObject
         resolution.IsFullScreen ? "in full screen"
         : resolution.IsWindow ? $"in a {resolution.Width} x {resolution.Height} window"
         : "in its own window";
+
+    // --- The card pictures -------------------------------------------------------------------
+
+    string? picturesText;
+
+    /// <summary>A line on how the card pictures stand, or null when the server hands out none.</summary>
+    public string? PicturesText
+    {
+        get => picturesText;
+        private set => Set(ref picturesText, value);
+    }
+
+    const string PicturesChecking = "Checking the card pictures…";
+    const string PicturesUpToDate = "Card pictures up to date.";
+    const string PicturesNotUpdated = "The card pictures could not be updated just now, so the game has the ones it had before.";
+    const string PicturesLater =
+        "Not all the card pictures came in time, so the game has the ones it had before. The rest come at the next Play.";
+    const string PicturesUnwritten =
+        "The card pictures could not all be written to the launcher's folder, so some may be old or missing.";
+    const string PicturesNotSetUp = "The launcher could not set the card pictures up, so the game starts without them.";
+    const string NoPicturesGameFolder =
+        "No card pictures from the server with this game folder: its path is one the game can't take. A plain one, such as C:\\Games\\Yu-Gi-Oh, works.";
+    const string NoPicturesLauncherFolder =
+        "No card pictures from the server: the launcher's folder, under your Windows user name, has letters the game can't read.";
+
+    // Writes the working folder's patch.txt and brings its pictures up to date, and returns the
+    // folder to start the game in. The pictures never keep the game from starting for long
+    // (CardPictures.Budget): whatever goes wrong, it starts with the ones it has, or with none,
+    // from the game's own folder if need be.
+    async Task<string> PreparePicturesAsync(GameFolder current)
+    {
+        string start;
+        NoPictures? reason;
+        try
+        {
+            (start, reason) = await Task.Run(() => WorkingFolder.Prepare(current, WorkingFolder.Path));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            PicturesText = PicturesNotSetUp;
+            return WorkingFolder.Fallback(current);
+        }
+        if (reason is { } why)
+        {
+            PicturesText = why == NoPictures.LauncherFolder ? NoPicturesLauncherFolder : NoPicturesGameFolder;
+            return start;
+        }
+
+        bool done = false;
+        var progress = new Progress<PicturesProgress>(step =>
+        {
+            if (!done)
+                PicturesText = step.Total == 0 ? PicturesChecking : $"Updating card pictures, {step.Done} of {step.Total}";
+        });
+        PicturesText = PicturesChecking;
+        var outcome = await pictures.UpdateAsync(Path.Combine(WorkingFolder.Path, WorkingFolder.Overrides), progress);
+        done = true;
+        PicturesText = outcome switch
+        {
+            PicturesOutcome.None => null,
+            PicturesOutcome.UpToDate => PicturesUpToDate,
+            PicturesOutcome.Unfinished => PicturesLater,
+            PicturesOutcome.Unwritable => PicturesUnwritten,
+            _ => PicturesNotUpdated,
+        };
+        return start;
+    }
 
     // --- The settings ------------------------------------------------------------------------
 

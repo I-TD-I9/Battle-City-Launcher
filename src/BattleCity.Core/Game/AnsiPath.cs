@@ -45,14 +45,21 @@ static class AnsiPath
     }
 
     /// <summary>
-    /// <paramref name="folder"/>, made if it is not there yet, in the form the client can be given:
-    /// itself when it fits the code page, else its short name when that does, else null.
+    /// <paramref name="folder"/>, made if it is not there yet, in the form the client can be given
+    /// it (Form).
     /// </summary>
     public static string? Folder(string folder, Func<string, bool> fits, Func<string, string?> shortName)
     {
         Directory.CreateDirectory(folder);
-        return fits(folder) ? folder : shortName(folder) is { } name && fits(name) ? name : null;
+        return Form(folder, fits, shortName);
     }
+
+    /// <summary>
+    /// <paramref name="path"/> in the form the client can be given it: itself when it fits the
+    /// code page, else its short name when that does, else null.
+    /// </summary>
+    public static string? Form(string path, Func<string, bool> fits, Func<string, string?> shortName) =>
+        fits(path) ? path : shortName(path) is { } name && fits(name) ? name : null;
 
     [DllImport("kernel32.dll")]
     static extern uint GetACP();

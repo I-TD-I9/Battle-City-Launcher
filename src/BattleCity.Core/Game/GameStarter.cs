@@ -37,14 +37,14 @@ public static class GameStarter
     }
 
     /// <summary>
-    /// Starts the patched client at <paramref name="client"/> from the game's folder, at
-    /// <paramref name="resolution"/>. <paramref name="home"/> is the launcher's folder as the
+    /// Starts the patched client at <paramref name="client"/> in <paramref name="workingFolder"/>,
+    /// at <paramref name="resolution"/>. <paramref name="home"/> is the launcher's folder as the
     /// client can be given it (CncDdraw.Folder), or null when it has no such form.
     /// </summary>
-    public static Process Start(string client, GameFolder game, Resolution resolution, string? home) =>
-        Process.Start(StartInfo(client, game, resolution, home)) ?? throw new InvalidOperationException("Windows did not start the game");
+    public static Process Start(string client, string workingFolder, Resolution resolution, string? home) =>
+        Process.Start(StartInfo(client, workingFolder, resolution, home)) ?? throw new InvalidOperationException("Windows did not start the game");
 
-    internal static ProcessStartInfo StartInfo(string client, GameFolder game, Resolution resolution, string? home)
+    internal static ProcessStartInfo StartInfo(string client, string workingFolder, Resolution resolution, string? home)
     {
         // cnc-ddraw looks for its settings beside its DLL by the path GetModuleFileNameA gives
         // (cfg_init, src/config.c), which turns whatever the system's code page can't spell into
@@ -54,12 +54,13 @@ public static class GameStarter
         bool scaled = !resolution.IsDefault && home is not null;
         var info = new ProcessStartInfo(home is null ? client : Path.Join(home, Path.GetFileName(client)))
         {
-            // The client opens its game files by relative paths: patch.txt and the archives it
-            // names, the sound archives in VOICE and Region.dat, and Konami's ygo.exe started it as
-            // ./online_pc.dat from the install folder. So the copy runs with the game's folder as
-            // its working directory, wherever the copy itself lives. Its saves go to the folder
-            // ClientKey names.
-            WorkingDirectory = game.Path,
+            // The client opens its game files by relative paths, patch.txt first, and Konami's
+            // ygo.exe started it as ./online_pc.dat from the install folder. The copy runs in the
+            // launcher's working folder instead, whose patch.txt leads the client to the game's
+            // archives and folder by absolute path (WorkingFolder), and so to the sound archives in
+            // VOICE and to Region.dat; or, when that can't be, in the game's folder itself. Its
+            // saves go to the folder ClientKey names, wherever it runs.
+            WorkingDirectory = workingFolder,
             // A new profile starts in full screen at 16 bits a pixel (0x5fbc5b), a mode today's
             // Windows often shows as a blank screen, and ClientKey starts every player on a new
             // profile. -win runs the game in a window instead, whatever the profile says (read at

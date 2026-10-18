@@ -23,14 +23,21 @@ public class GameStarterTests
     }
 
     const string Client = @"C:\Launcher\online_pc.exe";
-    static readonly GameFolder Game = new(@"D:\Games\Yu-Gi-Oh! ONLINE", GameStatus.Ready, null);
+    const string Working = @"C:\Launcher\Game";
 
     [Fact]
-    public void The_game_runs_in_a_window_from_its_own_folder()
+    public void The_game_runs_in_a_window_from_the_folder_it_is_given()
     {
-        var info = GameStarter.StartInfo(Client, Game, Resolution.Default, @"C:\Launcher");
-        Assert.Equal((Client, @"D:\Games\Yu-Gi-Oh! ONLINE", "-win"), (info.FileName, info.WorkingDirectory, info.Arguments));
+        var info = GameStarter.StartInfo(Client, Working, Resolution.Default, @"C:\Launcher");
+        Assert.Equal((Client, Working, "-win"), (info.FileName, info.WorkingDirectory, info.Arguments));
         Assert.False(info.UseShellExecute);
+    }
+
+    [Fact]
+    public void The_launchers_working_folder_is_its_own()
+    {
+        Assert.Equal(Path.Combine(LauncherSettings.Folder, "Game"), WorkingFolder.Path);
+        Assert.Equal("bc", WorkingFolder.Overrides);
     }
 
     // The client takes -32 over -win wherever each stands, so the two never go together.
@@ -40,13 +47,13 @@ public class GameStarterTests
     [InlineData("1600x1200", "-32")]
     [InlineData("full", "-32")]
     public void The_resolution_decides_the_one_switch_the_client_gets(string resolution, string arguments) =>
-        Assert.Equal(arguments, GameStarter.StartInfo(Client, Game, Resolution.Parse(resolution), @"C:\Launcher").Arguments);
+        Assert.Equal(arguments, GameStarter.StartInfo(Client, Working, Resolution.Parse(resolution), @"C:\Launcher").Arguments);
 
     [Fact]
     public void The_client_starts_by_its_folders_form_the_code_page_can_spell()
     {
         const string Long = @"C:\Users\Дмитрий\AppData\Local\BattleCity";
-        var info = GameStarter.StartInfo(Long + @"\online_pc.exe", Game, Resolution.FullScreen, @"C:\Users\8D0B~1\AppData\Local\BATTLE~1");
+        var info = GameStarter.StartInfo(Long + @"\online_pc.exe", Working, Resolution.FullScreen, @"C:\Users\8D0B~1\AppData\Local\BATTLE~1");
         Assert.Equal(@"C:\Users\8D0B~1\AppData\Local\BATTLE~1\online_pc.exe", info.FileName);
         Assert.Equal(@"C:\Users\8D0B~1\AppData\Local\BATTLE~1\ddraw.ini", info.Environment[CncDdraw.ConfigFileVariable]);
     }
@@ -56,7 +63,7 @@ public class GameStarterTests
     [InlineData("full")]
     public void Cnc_ddraw_is_told_where_its_settings_are(string resolution) =>
         Assert.Equal(@"C:\Launcher\ddraw.ini",
-                     GameStarter.StartInfo(Client, Game, Resolution.Parse(resolution), @"C:\Launcher").Environment[CncDdraw.ConfigFileVariable]);
+                     GameStarter.StartInfo(Client, Working, Resolution.Parse(resolution), @"C:\Launcher").Environment[CncDdraw.ConfigFileVariable]);
 
     [Fact]
     public void A_cnc_ddraw_setting_of_the_players_own_never_reaches_the_game()
@@ -65,9 +72,9 @@ public class GameStarterTests
         try
         {
             Environment.SetEnvironmentVariable(CncDdraw.ConfigFileVariable, @"D:\Other game\ddraw.ini");
-            Assert.False(GameStarter.StartInfo(Client, Game, Resolution.Default, @"C:\Launcher").Environment
+            Assert.False(GameStarter.StartInfo(Client, Working, Resolution.Default, @"C:\Launcher").Environment
                                     .ContainsKey(CncDdraw.ConfigFileVariable));
-            Assert.Equal(@"C:\Launcher\ddraw.ini", GameStarter.StartInfo(Client, Game, Resolution.FullScreen, @"C:\Launcher")
+            Assert.Equal(@"C:\Launcher\ddraw.ini", GameStarter.StartInfo(Client, Working, Resolution.FullScreen, @"C:\Launcher")
                                                                .Environment[CncDdraw.ConfigFileVariable]);
         }
         finally
@@ -80,7 +87,7 @@ public class GameStarterTests
     [Fact]
     public void Without_a_folder_the_code_page_can_spell_the_game_keeps_its_own_window()
     {
-        var info = GameStarter.StartInfo(Client, Game, Resolution.FullScreen, null);
+        var info = GameStarter.StartInfo(Client, Working, Resolution.FullScreen, null);
         Assert.Equal((Client, "-win"), (info.FileName, info.Arguments));
         Assert.False(info.Environment.ContainsKey(CncDdraw.ConfigFileVariable));
     }
