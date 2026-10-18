@@ -40,8 +40,15 @@
 
 ## Good to know
 
-- Your UserID is case-sensitive.
+- Your UserID is case-sensitive, and a UserID or password is letters and digits only: the game's
+  login screen won't take anything else.
 - One account per email address. Forgot your password? Set a new one under **Account**.
+- The game runs in its own small window. To play it bigger, pick a size or **Full screen** for
+  **Resolution** under **Settings**. The sizes with a star are the sharpest, and full screen uses
+  your main monitor.
+- Some cards the game knows have no picture of their own. The launcher fetches pictures for them
+  from the server when you press **Play**, so the first time can take a moment. On a slow
+  connection the game won't wait for all of them: the rest come the next time you play.
 
 <p align="center"><b>See you in Battle City!</b></p>
 
@@ -53,7 +60,11 @@ With the .NET 10 SDK on Windows:
 dotnet publish src/BattleCity.Launcher -c Release -o publish
 ```
 
+The first build downloads [cnc-ddraw](https://github.com/FunkyFr3sh/cnc-ddraw), which the launcher
+carries for the bigger screens, and checks it against the hash the project pins.
+
 ## License
 
-GPL-3.0. Yu-Gi-Oh! is a trademark of its owners; this project isn't affiliated with or endorsed
-by Konami.
+GPL-3.0. The launcher carries cnc-ddraw, which is under the MIT License: see
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Yu-Gi-Oh! is a trademark of its owners; this
+project isn't affiliated with or endorsed by Konami.
