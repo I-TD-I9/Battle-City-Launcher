@@ -5,25 +5,26 @@ namespace BattleCity.Accounts;
 
 /// <summary>
 /// The rules a new account's UserID and password follow, as the server's GET /api/info gives
-/// them. The launcher checks a sign-up against them before sending it; the server checks it
-/// again either way, and its wording is mirrored here so that both say the same thing.
+/// them, and letters and digits only whatever those say. The launcher checks a sign-up against
+/// them before sending it; the server checks it again either way, and its wording and order are
+/// mirrored here so that both say the same thing.
 /// </summary>
 public sealed record SignUpRules(bool Open, int NameMin, int NameMax, string NamePattern,
                                  int PasswordMin, int PasswordMax, string PasswordPattern)
 {
     /// <summary>The server's rules when this was written, for when they cannot be fetched.</summary>
     public static SignUpRules Default { get; } =
-        new(true, 3, 16, "^[A-Za-z0-9][A-Za-z0-9_-]*$", 8, 16, "^[!-~]+$");
+        new(true, 3, 16, "^[A-Za-z0-9]+$", 8, 16, "^[A-Za-z0-9]+$");
 
     // The server's CPU opponents adopt accounts with this prefix, so players may not take them.
     const string CpuPrefix = "cpu-";
 
     public string? NameProblem(string name)
     {
-        if (name.Length < NameMin || name.Length > NameMax || !WholeMatch(NamePattern, name))
-            return $"A UserID is {NameMin} to {NameMax} characters: letters, digits, _ and -, beginning with a letter or digit.";
         if (name.StartsWith(CpuPrefix, StringComparison.OrdinalIgnoreCase))
             return $"UserIDs beginning with {CpuPrefix} belong to the server's CPU opponents.";
+        if (name.Length < NameMin || name.Length > NameMax || !WholeMatch(NamePattern, name) || !Typeable(name))
+            return $"A UserID is {NameMin} to {NameMax} letters and digits.";
         return null;
     }
 
@@ -34,8 +35,9 @@ public sealed record SignUpRules(bool Open, int NameMin, int NameMax, string Nam
     /// </summary>
     public string? PasswordProblem(string password, string? name)
     {
-        if (password.Length < PasswordMin || password.Length > PasswordMax || !WholeMatch(PasswordPattern, password))
-            return $"A password is {PasswordMin} to {PasswordMax} characters: letters, digits and symbols, without spaces.";
+        if (password.Length < PasswordMin || password.Length > PasswordMax || !WholeMatch(PasswordPattern, password)
+            || !Typeable(password))
+            return $"A password is {PasswordMin} to {PasswordMax} letters and digits: the game's login screen takes nothing else.";
         if (name is not null && string.Equals(password, name, StringComparison.OrdinalIgnoreCase))
             return "The password cannot be the UserID.";
         return null;
@@ -85,6 +87,11 @@ public sealed record SignUpRules(bool Open, int NameMin, int NameMax, string Nam
             return null;
         }
     }
+
+    // Whether the game's login screen can take text: it keeps a typed character only when isalnum
+    // passes it (0x6419e1, in sub_6416d0, the input routine of its two fields) and drops every
+    // other, so an account with one could never log in, whatever a server lets through.
+    static bool Typeable(string text) => text.All(char.IsAsciiLetterOrDigit);
 
     // The match must cover the whole text: .NET's $ also matches before a final newline, which
     // the server's re.fullmatch never lets through.

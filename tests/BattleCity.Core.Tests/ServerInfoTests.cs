@@ -9,8 +9,8 @@ public class ServerInfoTests
     {
         using var json = JsonDocument.Parse($$"""
             {"ok": true, "registration": "open",
-             "name": {"min": 3, "max": 16, "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"},
-             "password": {"min": 8, "max": 16, "pattern": "^[!-~]+$"}{{launcher}}}
+             "name": {"min": 3, "max": 16, "pattern": "^[A-Za-z0-9]+$"},
+             "password": {"min": 8, "max": 16, "pattern": "^[A-Za-z0-9]+$"}{{launcher}}}
             """);
         return ServerInfo.FromInfo(json.RootElement);
     }

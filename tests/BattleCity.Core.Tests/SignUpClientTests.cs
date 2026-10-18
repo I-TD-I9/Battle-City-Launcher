@@ -139,8 +139,8 @@ public class SignUpClientTests
     {
         var (client, server) = Client(_ => Reply(HttpStatusCode.OK, """
             {"ok": true, "registration": "open",
-             "name": {"min": 3, "max": 16, "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"},
-             "password": {"min": 8, "max": 16, "pattern": "^[!-~]+$"}}
+             "name": {"min": 3, "max": 16, "pattern": "^[A-Za-z0-9]+$"},
+             "password": {"min": 8, "max": 16, "pattern": "^[A-Za-z0-9]+$"}}
             """));
         Assert.Equal(new ServerInfo(SignUpRules.Default, null), await client.GetInfoAsync());
         Assert.Equal(new Uri("https://api.example.test/api/info"), server.Seen.Single().Uri);
@@ -154,8 +154,8 @@ public class SignUpClientTests
     {
         var (rules, _) = Client(_ => Labelled(HttpStatusCode.OK, """
             {"ok": true, "registration": "open",
-             "name": {"min": 3, "max": 16, "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"},
-             "password": {"min": 8, "max": 16, "pattern": "^[!-~]+$"}}
+             "name": {"min": 3, "max": 16, "pattern": "^[A-Za-z0-9]+$"},
+             "password": {"min": 8, "max": 16, "pattern": "^[A-Za-z0-9]+$"}}
             """, "application/json; charset=" + charset));
         Assert.Equal(SignUpRules.Default, (await rules.GetInfoAsync())?.Rules);
 

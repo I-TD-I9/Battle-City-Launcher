@@ -7,48 +7,79 @@ public class SignUpRulesTests
 {
     static readonly SignUpRules Rules = SignUpRules.Default;
 
+    [Fact]
+    public void Without_the_servers_rules_a_name_and_a_password_are_letters_and_digits()
+    {
+        Assert.Equal((3, 16, "^[A-Za-z0-9]+$"), (Rules.NameMin, Rules.NameMax, Rules.NamePattern));
+        Assert.Equal((8, 16, "^[A-Za-z0-9]+$"), (Rules.PasswordMin, Rules.PasswordMax, Rules.PasswordPattern));
+        Assert.True(Rules.Open);
+    }
+
     [Theory]
     [InlineData("abc")]
     [InlineData("Duelist")]
-    [InlineData("a_b-c")]
     [InlineData("9lives")]
     [InlineData("SixteenCharName1")]
+    [InlineData("cpuYugi")]
     public void Good_names_pass(string name) => Assert.Null(Rules.NameProblem(name));
 
+    // The game's login screen drops anything but letters and digits as it is typed.
     [Theory]
     [InlineData("")]
     [InlineData("ab")]
     [InlineData("SeventeenCharName")]
+    [InlineData("a_b-c")]
+    [InlineData("Duel_ist")]
+    [InlineData("Duel-ist")]
     [InlineData("_abc")]
     [InlineData("-abc")]
+    [InlineData("Duelist!")]
     [InlineData("a b c")]
     [InlineData("Duelist\n")]
     [InlineData("Düelist")]
     public void Bad_names_are_refused(string name) =>
-        Assert.Equal("A UserID is 3 to 16 characters: letters, digits, _ and -, beginning with a letter or digit.",
-                     Rules.NameProblem(name));
+        Assert.Equal("A UserID is 3 to 16 letters and digits.", Rules.NameProblem(name));
 
+    // Checked first, as the server does.
     [Theory]
     [InlineData("cpu-Yugi")]
     [InlineData("CPU-Kaiba")]
     [InlineData("Cpu-me")]
+    [InlineData("cpu-")]
     public void The_CPU_opponents_names_are_refused(string name) =>
         Assert.Equal("UserIDs beginning with cpu- belong to the server's CPU opponents.", Rules.NameProblem(name));
 
+    // A server still giving the old patterns lets these through; the game's login screen would not.
+    [Fact]
+    public void Letters_and_digits_hold_whatever_the_server_says()
+    {
+        var old = new SignUpRules(true, 3, 16, "^[A-Za-z0-9][A-Za-z0-9_-]*$", 8, 16, "^[!-~]+$");
+        Assert.Equal("A UserID is 3 to 16 letters and digits.", old.NameProblem("duel_king"));
+        Assert.Equal("A UserID is 3 to 16 letters and digits.", old.NameProblem("duel-king"));
+        Assert.Equal("A password is 8 to 16 letters and digits: the game's login screen takes nothing else.",
+                     old.PasswordProblem("pass-word1", "DuelKing"));
+        Assert.NotNull(old.PasswordProblem("Battle-City!", null));
+        Assert.Null(old.NameProblem("DuelKing"));
+        Assert.Null(old.PasswordProblem("password1", "DuelKing"));
+    }
+
     [Theory]
-    [InlineData("Battle-City!")]
+    [InlineData("BattleCity1")]
     [InlineData("12345678")]
-    [InlineData("~!@#$%^&*()_+{}")]
+    [InlineData("abcdEFGH12345678")]
     public void Good_passwords_pass(string password) => Assert.Null(Rules.PasswordProblem(password, "Duelist"));
 
     [Theory]
     [InlineData("short")]
+    [InlineData("Battle-City!")]
+    [InlineData("pass_word1")]
+    [InlineData("~!@#$%^&*()_+{}")]
     [InlineData("has a space")]
-    [InlineData("SeventeenChars!!!")]
+    [InlineData("SeventeenChars123")]
     [InlineData("pässword")]
     [InlineData("password\n")]
     public void Bad_passwords_are_refused(string password) =>
-        Assert.Equal("A password is 8 to 16 characters: letters, digits and symbols, without spaces.",
+        Assert.Equal("A password is 8 to 16 letters and digits: the game's login screen takes nothing else.",
                      Rules.PasswordProblem(password, "Duelist"));
 
     [Fact]
