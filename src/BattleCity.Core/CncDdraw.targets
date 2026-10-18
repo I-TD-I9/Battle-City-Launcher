@@ -1,0 +1,79 @@
+<Project>
+
+  <!-- cnc-ddraw (https://github.com/FunkyFr3sh/cnc-ddraw, MIT), the DirectDraw wrapper behind the
+       bigger windows and full screen. The repository holds only where its release is and what it
+       hashes to: the first build downloads the release into obj, checks it, and every build
+       embeds its ddraw.dll in BattleCity.Core, so the launcher never needs GitHub to start the
+       game. Display/CncDdraw.cs pins the DLL's hash a second time and checks it at run time. -->
+  <PropertyGroup>
+    <CncDdrawVersion>7.1.0.0</CncDdrawVersion>
+    <CncDdrawUrl>https://github.com/FunkyFr3sh/cnc-ddraw/releases/download/v$(CncDdrawVersion)/cnc-ddraw.zip</CncDdrawUrl>
+    <CncDdrawZipSha256>0b13ab89a64c9918189b1dadd449ef6ed3cb3b7b19cabd96d8adbd95505bb908</CncDdrawZipSha256>
+    <CncDdrawDllSha256>85e0f7d530dfda134793a57cb3e76b0287dcc96892ee57162dd68f47283b03a9</CncDdrawDllSha256>
+    <CncDdrawFolder>$([MSBuild]::NormalizeDirectory($(MSBuildProjectDirectory), $(BaseIntermediateOutputPath), 'cnc-ddraw-$(CncDdrawVersion)'))</CncDdrawFolder>
+    <CncDdrawDll>$(CncDdrawFolder)ddraw.dll</CncDdrawDll>
+  </PropertyGroup>
+
+  <!-- Its licence, as it stands at the release's tag, goes wherever the DLL does. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)Display\cnc-ddraw-LICENSE.txt"
+                      LogicalName="BattleCity.Display.cnc-ddraw-LICENSE.txt" />
+  </ItemGroup>
+
+  <!-- A DLL left in obj that is not the release's, after a copy that broke off for one, is
+       thrown away and fetched again. -->
+  <Target Name="CheckCachedCncDdraw" Condition="Exists('$(CncDdrawDll)')">
+    <GetFileHash Files="$(CncDdrawDll)" Algorithm="SHA256">
+      <Output TaskParameter="Hash" PropertyName="_CncDdrawCachedHash" />
+    </GetFileHash>
+    <Message Importance="high" Condition="'$(_CncDdrawCachedHash)' != '$(CncDdrawDllSha256)'"
+             Text="$(CncDdrawDll) is not cnc-ddraw $(CncDdrawVersion)'s ddraw.dll, so it is downloaded again." />
+    <Delete Files="$(CncDdrawDll)" Condition="'$(_CncDdrawCachedHash)' != '$(CncDdrawDllSha256)'" />
+  </Target>
+
+  <Target Name="DownloadCncDdraw" Condition="!Exists('$(CncDdrawDll)')">
+    <!-- Names of this build's own, so that two builds at once never write the same file. -->
+    <PropertyGroup>
+      <_CncDdrawRun>$([System.Guid]::NewGuid().ToString('N'))</_CncDdrawRun>
+      <_CncDdrawZip>$(CncDdrawFolder)cnc-ddraw-$(_CncDdrawRun).zip</_CncDdrawZip>
+      <_CncDdrawUnzipped>$(CncDdrawFolder)unzipped-$(_CncDdrawRun)\</_CncDdrawUnzipped>
+    </PropertyGroup>
+
+    <DownloadFile SourceUrl="$(CncDdrawUrl)" DestinationFolder="$(CncDdrawFolder)"
+                  DestinationFileName="cnc-ddraw-$(_CncDdrawRun).zip" SkipUnchangedFiles="false" Retries="2"
+                  ContinueOnError="true" />
+    <Error Condition="'$(MSBuildLastTaskResult)' != 'true'"
+           Text="Could not download cnc-ddraw $(CncDdrawVersion) from $(CncDdrawUrl). The launcher carries its ddraw.dll, so the first build needs the network." />
+
+    <GetFileHash Files="$(_CncDdrawZip)" Algorithm="SHA256">
+      <Output TaskParameter="Hash" PropertyName="_CncDdrawZipHash" />
+    </GetFileHash>
+    <Delete Files="$(_CncDdrawZip)" Condition="'$(_CncDdrawZipHash)' != '$(CncDdrawZipSha256)'" />
+    <Error Condition="'$(_CncDdrawZipHash)' != '$(CncDdrawZipSha256)'"
+           Text="The cnc-ddraw.zip downloaded from $(CncDdrawUrl) has the SHA-256 $(_CncDdrawZipHash), not $(CncDdrawZipSha256). The release may have been changed; the build will not use it." />
+
+    <Unzip SourceFiles="$(_CncDdrawZip)" DestinationFolder="$(_CncDdrawUnzipped)" Include="ddraw.dll" />
+    <Delete Files="$(_CncDdrawZip)" />
+    <GetFileHash Files="$(_CncDdrawUnzipped)ddraw.dll" Algorithm="SHA256">
+      <Output TaskParameter="Hash" PropertyName="_CncDdrawUnzippedHash" />
+    </GetFileHash>
+    <RemoveDir Directories="$(_CncDdrawUnzipped)" Condition="'$(_CncDdrawUnzippedHash)' != '$(CncDdrawDllSha256)'" />
+    <Error Condition="'$(_CncDdrawUnzippedHash)' != '$(CncDdrawDllSha256)'"
+           Text="The ddraw.dll in cnc-ddraw $(CncDdrawVersion)'s release has the SHA-256 $(_CncDdrawUnzippedHash), not $(CncDdrawDllSha256)." />
+    <Copy SourceFiles="$(_CncDdrawUnzipped)ddraw.dll" DestinationFolder="$(CncDdrawFolder)" />
+    <RemoveDir Directories="$(_CncDdrawUnzipped)" />
+  </Target>
+
+  <Target Name="EmbedCncDdraw" BeforeTargets="BeforeBuild" DependsOnTargets="CheckCachedCncDdraw;DownloadCncDdraw">
+    <!-- Checked once more as it goes in: the file in obj is easy to swap. -->
+    <GetFileHash Files="$(CncDdrawDll)" Algorithm="SHA256">
+      <Output TaskParameter="Hash" PropertyName="_CncDdrawDllHash" />
+    </GetFileHash>
+    <Error Condition="'$(_CncDdrawDllHash)' != '$(CncDdrawDllSha256)'"
+           Text="$(CncDdrawDll) has the SHA-256 $(_CncDdrawDllHash), not cnc-ddraw $(CncDdrawVersion)'s $(CncDdrawDllSha256)." />
+    <ItemGroup>
+      <EmbeddedResource Include="$(CncDdrawDll)" LogicalName="BattleCity.Display.ddraw.dll" />
+    </ItemGroup>
+  </Target>
+
+</Project>

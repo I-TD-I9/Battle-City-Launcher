@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -28,7 +29,14 @@ public partial class MainWindow : Window
         _ = DwmSetWindowAttribute(window, DwmwaTextColor, ref ink, sizeof(int));
     }
 
-    async void Play_Click(object sender, RoutedEventArgs e) => await model.PlayAsync();
+    async void Play_Click(object sender, RoutedEventArgs e) => await model.PlayAsync(new WindowInteropHelper(this).Handle);
+
+    // The Settings page lists the resolutions that fit the monitor the launcher is on as it comes up.
+    void Tabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.OriginalSource == Tabs && Tabs.SelectedItem == SettingsTab)
+            model.ShowResolutions(new WindowInteropHelper(this).Handle);
+    }
 
     async void Refresh_Click(object sender, RoutedEventArgs e) => await model.CheckServerAsync();
 

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using BattleCity.Client;
+using BattleCity.Display;
 
 namespace BattleCity.Game;
 
@@ -30,52 +31,48 @@ public static class GameStarter
 
         Directory.CreateDirectory(folder);
         string target = Path.Combine(folder, ClientName);
-        if (File.Exists(target) && File.ReadAllBytes(target).AsSpan().SequenceEqual(patched))
-            return target;
-        string partial = target + ".new";
-        try
-        {
-            File.WriteAllBytes(partial, patched);
-            // Refused while the old copy is running.
-            File.Move(partial, target, overwrite: true);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            TryDelete(partial);
-            throw;
-        }
+        // Refused while the old copy is running.
+        LauncherFiles.Replace(target, patched);
         return target;
     }
 
-    static void TryDelete(string path)
+    /// <summary>
+    /// Starts the patched client at <paramref name="client"/> from the game's folder, at
+    /// <paramref name="resolution"/>. <paramref name="home"/> is the launcher's folder as the
+    /// client can be given it (CncDdraw.Folder), or null when it has no such form.
+    /// </summary>
+    public static Process Start(string client, GameFolder game, Resolution resolution, string? home) =>
+        Process.Start(StartInfo(client, game, resolution, home)) ?? throw new InvalidOperationException("Windows did not start the game");
+
+    internal static ProcessStartInfo StartInfo(string client, GameFolder game, Resolution resolution, string? home)
     {
-        try
+        // cnc-ddraw looks for its settings beside its DLL by the path GetModuleFileNameA gives
+        // (cfg_init, src/config.c), which turns whatever the system's code page can't spell into
+        // question marks. So the copy starts by the launcher's folder in a form the code page can
+        // spell, which the DLL's path then takes, and cnc-ddraw is told where the file is besides.
+        // A path to settings of the player's own, for other games, never reaches this one.
+        bool scaled = !resolution.IsDefault && home is not null;
+        var info = new ProcessStartInfo(home is null ? client : Path.Join(home, Path.GetFileName(client)))
         {
-            File.Delete(path);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            // Overwritten by the next attempt.
-        }
+            // The client opens its game files by relative paths: patch.txt and the archives it
+            // names, the sound archives in VOICE and Region.dat, and Konami's ygo.exe started it as
+            // ./online_pc.dat from the install folder. So the copy runs with the game's folder as
+            // its working directory, wherever the copy itself lives. Its saves go to the folder
+            // ClientKey names.
+            WorkingDirectory = game.Path,
+            // A new profile starts in full screen at 16 bits a pixel (0x5fbc5b), a mode today's
+            // Windows often shows as a blank screen, and ClientKey starts every player on a new
+            // profile. -win runs the game in a window instead, whatever the profile says (read at
+            // 0x4164b5, taken at 0x4150d1). For a bigger window or full screen, -32 asks for the
+            // client's own full screen at 32 bits a pixel, which cnc-ddraw takes over and scales
+            // (CncDdraw). The client looks for -32 after -win (0x416544), so given both it would
+            // take -32: only one is ever passed.
+            Arguments = scaled ? "-32" : "-win",
+            UseShellExecute = false,
+        };
+        info.Environment.Remove(CncDdraw.ConfigFileVariable);
+        if (scaled)
+            info.Environment[CncDdraw.ConfigFileVariable] = Path.Join(home, CncDdraw.IniName);
+        return info;
     }
-
-    /// <summary>Starts the patched client at <paramref name="client"/> from the game's folder.</summary>
-    public static Process Start(string client, GameFolder game) =>
-        Process.Start(StartInfo(client, game)) ?? throw new InvalidOperationException("Windows did not start the game");
-
-    internal static ProcessStartInfo StartInfo(string client, GameFolder game) => new(client)
-    {
-        // The client opens its game files by relative paths: patch.txt and the archives it names,
-        // the sound archives in VOICE and Region.dat, and Konami's ygo.exe started it as
-        // ./online_pc.dat from the install folder. So the copy runs with the game's folder as its
-        // working directory, wherever the copy itself lives. Its saves go to the folder ClientKey
-        // names.
-        WorkingDirectory = game.Path,
-        // A new profile starts in full screen at 16 bits a pixel (0x5fbc5b), a mode today's
-        // Windows often shows as a blank screen, and ClientKey starts every player on a new
-        // profile. -win runs the game in a window instead, whatever the profile says (read at
-        // 0x4164b5, taken at 0x4150d1).
-        Arguments = "-win",
-        UseShellExecute = false,
-    };
 }

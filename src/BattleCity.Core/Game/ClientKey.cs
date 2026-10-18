@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-using System.Text;
 using Microsoft.Win32;
 
 namespace BattleCity.Game;
@@ -44,15 +42,17 @@ public static class ClientKey
     /// when the client can open no folder of the launcher's, and so picks its own.
     /// </summary>
     public static string? Prepare(string saveFolder, string? gameFolder, string key = Key) =>
-        Prepare(saveFolder, gameFolder, key, FitsAnsi, ShortName);
+        Prepare(saveFolder, gameFolder, key, AnsiPath.Fits, AnsiPath.ShortName);
 
     internal static string? Prepare(string saveFolder, string? gameFolder, string key,
                                     Func<string, bool> fits, Func<string, string?> shortName)
     {
-        string? usable = Usable(saveFolder, fits, shortName);
+        // The client opens its files through Windows' ANSI functions, so its folder must be one
+        // the system's code page can spell (AnsiPath).
+        string? usable = AnsiPath.Folder(saveFolder, fits, shortName);
         if (usable is null && gameFolder is not null
             && Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(gameFolder)) is { Length: > 0 } parent)
-            usable = Usable(Path.Combine(parent, Fallback), fits, shortName);
+            usable = AnsiPath.Folder(Path.Combine(parent, Fallback), fits, shortName);
         using var system = Registry.CurrentUser.CreateSubKey(key, writable: true);
         if (usable is null)
             system.DeleteValue("CommonDir", throwOnMissingValue: false);
@@ -61,48 +61,4 @@ public static class ClientKey
         system.SetValue("Release", Release, RegistryValueKind.String);
         return usable;
     }
-
-    // The client opens its files through Windows' ANSI functions, so its folder must be one the
-    // system's code page can spell. A folder that cannot be may still have an 8.3 short name that
-    // can, when the volume keeps them.
-    static string? Usable(string folder, Func<string, bool> fits, Func<string, string?> shortName)
-    {
-        Directory.CreateDirectory(folder);
-        return fits(folder) ? folder : shortName(folder) is { } name && fits(name) ? name : null;
-    }
-
-    static ClientKey() => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-
-    /// <summary>
-    /// Whether <paramref name="path"/> comes through the system's ANSI code page unchanged. In a
-    /// double-byte code page a character's second byte can be 0x5c, which the client's folder
-    /// maker splits paths on (0x648e02) as though it were a backslash, so such a byte must stand
-    /// for one.
-    /// </summary>
-    internal static bool FitsAnsi(string path)
-    {
-        try
-        {
-            var ansi = Encoding.GetEncoding((int)GetACP(), EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
-            byte[] bytes = ansi.GetBytes(path);
-            return ansi.GetString(bytes) == path && bytes.Count(b => b == '\\') == path.Count(c => c == '\\');
-        }
-        catch (Exception e) when (e is EncoderFallbackException or DecoderFallbackException or ArgumentException or NotSupportedException)
-        {
-            return false;
-        }
-    }
-
-    static string? ShortName(string path)
-    {
-        var buffer = new char[260];
-        uint length = GetShortPathName(path, buffer, (uint)buffer.Length);
-        return length is > 0 and < 260 ? new string(buffer, 0, (int)length) : null;
-    }
-
-    [DllImport("kernel32.dll")]
-    static extern uint GetACP();
-
-    [DllImport("kernel32.dll", EntryPoint = "GetShortPathNameW", CharSet = CharSet.Unicode, SetLastError = true)]
-    static extern uint GetShortPathName(string longPath, [Out] char[] shortPath, uint length);
 }

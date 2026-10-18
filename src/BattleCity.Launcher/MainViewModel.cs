@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using BattleCity.Accounts;
 using BattleCity.Client;
+using BattleCity.Display;
 using BattleCity.Game;
 
 namespace BattleCity.Launcher;
@@ -165,12 +166,16 @@ public sealed class MainViewModel : ObservableObject
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            // Nothing breaks: the launcher just won't remember the folder, or the last account,
-            // next time.
+            // Nothing breaks: the launcher just won't remember the folder, the last account or
+            // the resolution next time.
         }
     }
 
-    public async Task PlayAsync()
+    /// <summary>
+    /// Makes the patched copy and starts it. <paramref name="window"/> is the launcher's own
+    /// window: a bigger game window goes on its monitor.
+    /// </summary>
+    public async Task PlayAsync(IntPtr window)
     {
         if (game is not { Status: GameStatus.Ready } current || !CanPlay)
             return;
@@ -195,6 +200,28 @@ public sealed class MainViewModel : ObservableObject
                 return;
             }
 
+            // A folder of the launcher's that the game can't be given keeps it in its own window.
+            string? home = CncDdraw.Folder(LauncherSettings.Folder);
+            var resolution = home is null ? Resolution.Default : settings.Resolution;
+            try
+            {
+                WindowPlacement? placement = null;
+                if (resolution.IsWindow)
+                {
+                    // The window that fits this monitor, which may not be the one chosen on another.
+                    var area = Measure(window);
+                    resolution = area.Effective(resolution);
+                    placement = resolution.IsWindow ? area.Place(resolution) : null;
+                }
+                await Task.Run(() => CncDdraw.Prepare(resolution, LauncherSettings.Folder, placement));
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                // As with the copy, most often the game is still open and holds the DLL.
+                PlayError = $"The launcher could not set the game up {Described(resolution)}. If the game is open, close it and try again, or choose another resolution. ({e.Message})";
+                return;
+            }
+
             try
             {
                 ClientKey.Prepare(ClientKey.SaveFolder, current.Path);
@@ -207,7 +234,7 @@ public sealed class MainViewModel : ObservableObject
 
             try
             {
-                var process = GameStarter.Start(client, current);
+                var process = GameStarter.Start(client, current, resolution, home);
                 Running = true;
                 process.Exited += (_, _) => ui.Post(_ => Running = false, null);
                 process.EnableRaisingEvents = true;
@@ -222,6 +249,102 @@ public sealed class MainViewModel : ObservableObject
         finally
         {
             Starting = false;
+        }
+    }
+
+    static string Described(Resolution resolution) =>
+        resolution.IsFullScreen ? "in full screen"
+        : resolution.IsWindow ? $"in a {resolution.Width} x {resolution.Height} window"
+        : "in its own window";
+
+    // --- The settings ------------------------------------------------------------------------
+
+    WorkArea? workArea;
+    bool scaled = true;
+    bool listing;
+    IReadOnlyList<ResolutionChoice> resolutions = [];
+
+    /// <summary>
+    /// The resolutions the Settings page's drop-down offers: the default, the bigger windows that
+    /// fit the launcher's monitor, and full screen.
+    /// </summary>
+    public IReadOnlyList<ResolutionChoice> Resolutions
+    {
+        get => resolutions;
+        private set
+        {
+            if (Set(ref resolutions, value))
+                Raise(nameof(SharpOffered));
+        }
+    }
+
+    /// <summary>
+    /// The resolution the drop-down shows: what Play would use here. A window chosen for a
+    /// bigger monitor than this one shows as the largest that fits, and stays chosen as it was
+    /// until the player picks another. Picking one keeps it at once; the game takes it up at the
+    /// next Play.
+    /// </summary>
+    public ResolutionChoice? ChosenResolution
+    {
+        get
+        {
+            if (listing)
+                return null;
+            var shown = workArea is { } area ? area.Effective(settings.Resolution, scaled) : settings.Resolution;
+            return resolutions.FirstOrDefault(choice => choice.Resolution == shown);
+        }
+        set
+        {
+            // The drop-down sets none while its list is replaced.
+            if (value is null)
+                return;
+            if (settings.Resolution != value.Resolution)
+            {
+                settings.Resolution = value.Resolution;
+                SaveSettings();
+            }
+            Raise(nameof(ChosenResolution));
+        }
+    }
+
+    /// <summary>Whether a window as sharp as can be is on offer, for the note on the star that marks it.</summary>
+    public bool SharpOffered => resolutions.Any(choice => choice.Sharp);
+
+    /// <summary>
+    /// Whether the resolution can be changed at all: not when the launcher's folder is one the
+    /// game can't be given (CncDdraw.Folder), and the game keeps its own window.
+    /// </summary>
+    public bool ResolutionChangeable => scaled;
+
+    public bool ResolutionFixed => !scaled;
+
+    /// <summary>Lists what fits the monitor <paramref name="window"/> is on, as the Settings page comes up.</summary>
+    public void ShowResolutions(IntPtr window) => ShowResolutions(Measure(window));
+
+    /// <summary>Lists what fits <paramref name="area"/>.</summary>
+    public void ShowResolutions(WorkArea area)
+    {
+        workArea = area;
+        scaled = CncDdraw.Folder(LauncherSettings.Folder) is not null;
+        Raise(nameof(ResolutionChangeable), nameof(ResolutionFixed));
+        // The drop-down lets go of its choice while its list is replaced, and is given the one to
+        // show once the new list is in.
+        listing = true;
+        Resolutions = [.. area.Choices(scaled).Select(resolution => new ResolutionChoice(resolution))];
+        listing = false;
+        Raise(nameof(ChosenResolution));
+    }
+
+    // The monitor the launcher is on; when Windows can't say, none, where no bigger window fits.
+    static WorkArea Measure(IntPtr window)
+    {
+        try
+        {
+            return WorkArea.Of(window);
+        }
+        catch (Win32Exception)
+        {
+            return default;
         }
     }
 

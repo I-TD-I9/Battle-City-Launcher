@@ -1,7 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Everything the launcher does that is not a window: finding and checking the game, patching
-       a copy of its client, signing up, and asking whether the server is up. -->
+       a copy of its client, setting up how it is shown, signing up, and asking whether the server
+       is up. -->
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>BattleCity</RootNamespace>
@@ -10,5 +11,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="BattleCity.Core.Tests" />
   </ItemGroup>
+
+  <Import Project="CncDdraw.targets" />
 
 </Project>

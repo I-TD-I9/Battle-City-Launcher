@@ -7,7 +7,7 @@ namespace BattleCity;
 /// <summary>What the launcher remembers between runs, kept as settings.json in its folder.</summary>
 public sealed class LauncherSettings
 {
-    /// <summary>The launcher's folder: its settings and the patched client.</summary>
+    /// <summary>The launcher's folder: its settings, and the patched client with cnc-ddraw beside it.</summary>
     public static string Folder { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BattleCity");
 
@@ -27,6 +27,9 @@ public sealed class LauncherSettings
 
     /// <summary>The UserID of the last account made or given a new password with the launcher, for its Account page.</summary>
     public string? LastAccount { get; set; }
+
+    /// <summary>How the game is shown from the next Play on: in its own window unless the player chose otherwise.</summary>
+    public Display.Resolution Resolution { get; set; }
 
     // For trying the launcher against another server, such as one on this machine. Nothing in the
     // launcher's window sets these.

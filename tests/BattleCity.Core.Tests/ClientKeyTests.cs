@@ -83,15 +83,6 @@ public sealed class ClientKeyTests : IDisposable
     }
 
     [Fact]
-    public void Plain_paths_fit_the_ansi_code_page() =>
-        Assert.True(ClientKey.FitsAnsi(@"C:\Users\Duelist\AppData\Local\BattleCity\Saves"));
-
-    [Fact]
-    public void A_path_no_ansi_code_page_can_spell_does_not_fit() =>
-        // Letters from three scripts, which no single ANSI code page holds together.
-        Assert.False(ClientKey.FitsAnsi(@"C:\Users\Иван 田中 Ελένη\Saves"));
-
-    [Fact]
     public void The_saves_live_in_the_launchers_folder() =>
         Assert.Equal(Path.Combine(LauncherSettings.Folder, "Saves"), ClientKey.SaveFolder);
 }

@@ -1,7 +1,7 @@
 name: Release
 
-# Pushing a tag vX.Y.Z publishes the launcher as that version and attaches it, with its SHA-256,
-# to a GitHub release of the same name.
+# Pushing a tag vX.Y.Z publishes the launcher as that version and attaches it, with its SHA-256
+# and the notices of the software it carries, to a GitHub release of the same name.
 on:
   push:
     tags: ['v*']
@@ -33,4 +33,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create $env:TAG publish/BattleCityLauncher.exe publish/BattleCityLauncher.exe.sha256 `
-            --title "Battle City Launcher $env:TAG" --generate-notes
+            THIRD-PARTY-NOTICES.md --title "Battle City Launcher $env:TAG" --generate-notes

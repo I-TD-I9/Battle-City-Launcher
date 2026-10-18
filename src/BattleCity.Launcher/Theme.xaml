@@ -198,6 +198,113 @@
     </Setter>
   </Style>
 
+  <!-- A drop-down, boxed like a field and resting on the plain button's shadow; its list opens
+       below on a card of its own, the item under the mouse in sky blue and the one chosen in
+       gold. -->
+  <Style TargetType="ComboBox">
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="Height" Value="38" />
+    <Setter Property="Padding" Value="12,0,38,0" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}" />
+    <Setter Property="MaxDropDownHeight" Value="420" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ComboBox">
+          <Grid>
+            <Border x:Name="Shadow" Background="{StaticResource InkBrush}" CornerRadius="8" Margin="3,3,-3,-3" />
+            <ToggleButton Focusable="False" ClickMode="Press"
+                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+              <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                  <Border x:Name="Box" Background="{StaticResource FieldBrush}" BorderBrush="{StaticResource InkBrush}"
+                          BorderThickness="2" CornerRadius="8">
+                    <TextBlock x:Name="Arrow" Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="12"
+                               Foreground="{StaticResource TextBrush}" HorizontalAlignment="Right"
+                               VerticalAlignment="Center" Margin="0,1,14,0" />
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter TargetName="Box" Property="Background" Value="{StaticResource HoverBrush}" />
+                    </Trigger>
+                    <Trigger Property="IsChecked" Value="True">
+                      <Setter TargetName="Arrow" Property="Text" Value="&#xE70E;" />
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                      <Setter TargetName="Box" Property="Background" Value="{StaticResource DisabledBrush}" />
+                      <Setter TargetName="Arrow" Property="Foreground" Value="{StaticResource MutedBrush}" />
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </ToggleButton.Template>
+            </ToggleButton>
+            <ContentPresenter IsHitTestVisible="False" Margin="{TemplateBinding Padding}"
+                              HorizontalAlignment="Left" VerticalAlignment="Center"
+                              Content="{TemplateBinding SelectionBoxItem}"
+                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                              ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
+            <Popup x:Name="PART_Popup" Placement="Bottom" VerticalOffset="8" AllowsTransparency="True"
+                   Focusable="False" PopupAnimation="Fade" IsOpen="{TemplateBinding IsDropDownOpen}">
+              <!-- Room for the card's shadow. -->
+              <Grid Margin="0,0,5,5" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                <Border Background="{StaticResource InkBrush}" CornerRadius="8" Margin="3,3,-3,-3" />
+                <Border Background="{StaticResource FieldBrush}" BorderBrush="{StaticResource InkBrush}"
+                        BorderThickness="2" CornerRadius="8" Padding="4">
+                  <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}" VerticalScrollBarVisibility="Auto"
+                                SnapsToDevicePixels="True">
+                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                  </ScrollViewer>
+                </Border>
+              </Grid>
+            </Popup>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Shadow" Property="Opacity" Value="0.35" />
+              <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+              <Setter Property="Cursor" Value="Arrow" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style TargetType="ComboBoxItem">
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ComboBoxItem">
+          <Border x:Name="Box" Background="Transparent" CornerRadius="6" Margin="0,1" Padding="{TemplateBinding Padding}">
+            <ContentPresenter />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+              <Setter TargetName="Box" Property="Background" Value="{StaticResource HoverBrush}" />
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+              <Setter TargetName="Box" Property="Background" Value="{StaticResource GoldBrush}" />
+            </Trigger>
+            <MultiTrigger>
+              <MultiTrigger.Conditions>
+                <Condition Property="IsSelected" Value="True" />
+                <Condition Property="IsHighlighted" Value="True" />
+              </MultiTrigger.Conditions>
+              <Setter TargetName="Box" Property="Background" Value="{StaticResource GoldHoverBrush}" />
+            </MultiTrigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <ControlTemplate x:Key="FieldTemplate" TargetType="Control">
     <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
             BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">

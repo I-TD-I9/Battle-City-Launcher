@@ -27,6 +27,13 @@
         </MultiDataTrigger>
       </Style.Triggers>
     </Style>
+    <!-- A few words under a setting on what it does. -->
+    <Style x:Key="SettingNote" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Margin" Value="0,0,0,5" />
+    </Style>
     <!-- The buttons beside it. -->
     <Style x:Key="SideButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
       <Setter Property="Height" Value="40" />
@@ -109,7 +116,7 @@
         </StackPanel>
       </DockPanel>
 
-      <TabControl Grid.Row="1" Margin="0,14,5,5">
+      <TabControl x:Name="Tabs" Grid.Row="1" Margin="0,14,5,5" SelectionChanged="Tabs_SelectionChanged">
 
         <TabItem Header="Play">
           <DockPanel>
@@ -352,6 +359,71 @@
             </StackPanel>
             </ScrollViewer>
           </DockPanel>
+        </TabItem>
+
+        <!-- The launcher's settings, a row each under a heading for their group. The resolutions
+             that fit are listed afresh each time the page comes up (Tabs_SelectionChanged). -->
+        <TabItem x:Name="SettingsTab" Header="Settings">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+            <StackPanel>
+              <TextBlock Text="Display" Style="{StaticResource Heading}" />
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="142" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Resolution" Style="{StaticResource FieldName}" />
+                <ComboBox Grid.Row="0" Grid.Column="1" Width="220" HorizontalAlignment="Left" Margin="0,0,0,3"
+                          ItemsSource="{Binding Resolutions}" SelectedItem="{Binding ChosenResolution}"
+                          IsEnabled="{Binding ResolutionChangeable}" TextSearch.TextPath="Label"
+                          AutomationProperties.Name="Resolution">
+                  <ComboBox.ItemContainerStyle>
+                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+                      <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+                    </Style>
+                  </ComboBox.ItemContainerStyle>
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                        <Image Source="{StaticResource LevelStar}" Width="14" Height="14" Margin="7,0,0,0"
+                               VerticalAlignment="Center"
+                               Visibility="{Binding Sharp, Converter={StaticResource Shown}}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,12,0,0">
+                  <TextBlock Style="{StaticResource SettingNote}" Foreground="{StaticResource TextBrush}"
+                             Visibility="{Binding ResolutionFixed, Converter={StaticResource Shown}}">
+                    Only Default can be used: the launcher's folder, under your Windows user name, has letters
+                    the game can't read.
+                  </TextBlock>
+                  <TextBlock Style="{StaticResource SettingNote}">
+                    Default is the game's own window, 800&#160;x&#160;600.
+                  </TextBlock>
+                  <TextBlock Style="{StaticResource SettingNote}"
+                             Visibility="{Binding SharpOffered, Converter={StaticResource Shown}}">
+                    The sizes with a <InlineUIContainer BaselineAlignment="Center"><Image Source="{StaticResource LevelStar}"
+                    Width="12" Height="12" /></InlineUIContainer> are the sharpest: whole multiples of
+                    800&#160;x&#160;600.
+                  </TextBlock>
+                  <TextBlock Style="{StaticResource SettingNote}">
+                    Only the sizes that fit this screen are listed, and full screen uses the main monitor.
+                  </TextBlock>
+                  <TextBlock Style="{StaticResource SettingNote}">
+                    A change takes effect the next time you press Play.
+                  </TextBlock>
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </ScrollViewer>
         </TabItem>
       </TabControl>
 

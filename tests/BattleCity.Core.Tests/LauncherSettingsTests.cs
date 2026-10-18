@@ -1,3 +1,5 @@
+using BattleCity.Display;
+
 namespace BattleCity.Tests;
 
 public sealed class LauncherSettingsTests : IDisposable
@@ -50,6 +52,52 @@ public sealed class LauncherSettingsTests : IDisposable
         Assert.Equal(@"D:\Games\Yu-Gi-Oh! ONLINE", settings.GameFolder);
         Assert.Equal("Duelist", settings.LastAccount);
         Assert.False(System.IO.File.Exists(File + ".new"));
+    }
+
+    [Fact]
+    public void The_resolution_is_the_default_until_another_is_chosen()
+    {
+        Assert.True(LauncherSettings.Load(File).Resolution.IsDefault);
+        Assert.True(new LauncherSettings().Resolution.IsDefault);
+        Directory.CreateDirectory(folder);
+        System.IO.File.WriteAllText(File, """{ "gameFolder": "D:\\Games\\Yu-Gi-Oh! ONLINE" }""");
+        Assert.True(LauncherSettings.Load(File).Resolution.IsDefault);
+    }
+
+    [Theory]
+    [InlineData("default")]
+    [InlineData("full")]
+    [InlineData("1024x768")]
+    [InlineData("1600x1200")]
+    [InlineData("3200x2400")]
+    public void The_resolution_is_saved_by_its_name(string name)
+    {
+        new LauncherSettings { Resolution = Resolution.Parse(name) }.Save(File);
+        Assert.Contains($"\"resolution\": \"{name}\"", System.IO.File.ReadAllText(File));
+        Assert.Equal(name, LauncherSettings.Load(File).Resolution.ToString());
+    }
+
+    [Theory]
+    [InlineData("\"FULL\"", "full")]
+    [InlineData("\"original\"", "default")]
+    [InlineData("\" 1600X1200 \"", "1600x1200")]
+    [InlineData("\"1700x1275\"", "default")]
+    [InlineData("\"800x600\"", "default")]
+    [InlineData("\"1600 x 1200\"", "default")]
+    [InlineData("\"FullScreen\"", "default")]
+    [InlineData("\"\"", "default")]
+    [InlineData("1600", "default")]
+    [InlineData("null", "default")]
+    [InlineData("true", "default")]
+    [InlineData("""{ "width": 1600, "height": 1200 }""", "default")]
+    [InlineData("""["full"]""", "default")]
+    public void A_resolution_the_launcher_does_not_know_reads_as_the_default_and_keeps_the_rest(string value, string resolution)
+    {
+        Directory.CreateDirectory(folder);
+        System.IO.File.WriteAllText(File, $$"""{ "resolution": {{value}}, "lastAccount": "Duelist" }""");
+        var settings = LauncherSettings.Load(File);
+        Assert.Equal(resolution, settings.Resolution.ToString());
+        Assert.Equal("Duelist", settings.LastAccount);
     }
 
     [Fact]
